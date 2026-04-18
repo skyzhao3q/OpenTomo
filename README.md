@@ -124,6 +124,10 @@ Conceptually, this maps to:
 
 OpenTomo is licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
+## Trademarks
+
+`OpenTomo` and `WorkTomo` are trademarks of skyzhao3q. See [TRADEMARKS.md](TRADEMARKS.md).
+
 ## Acknowledgements
 
 OpenTomo was developed with inspiration from several open-source projects:

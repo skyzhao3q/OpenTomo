@@ -1,0 +1,155 @@
+/**
+ * SettingsNavigator
+ *
+ * Navigator panel content for settings. Displays a list of settings sections
+ * (App, Workspace, Shortcuts, Preferences) that can be selected to show in the details panel.
+ *
+ * Styling follows SessionList/SourcesListPanel patterns for visual consistency.
+ */
+
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import { Separator } from '@/components/ui/separator'
+import type { DetailsPageMeta } from '@/lib/navigation-registry'
+import type { SettingsSubpage } from '../../../shared/types'
+import { SETTINGS_ITEMS } from '../../../shared/menu-schema'
+import { SETTINGS_ICONS } from '@/components/icons/SettingsIcons'
+
+export const meta: DetailsPageMeta = {
+  navigator: 'settings',
+  slug: 'navigator',
+}
+
+interface SettingsNavigatorProps {
+  /** Currently selected settings subpage */
+  selectedSubpage: SettingsSubpage
+  /** Called when a subpage is selected */
+  onSelectSubpage: (subpage: SettingsSubpage) => void
+}
+
+interface SettingsItem {
+  id: SettingsSubpage
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  description: string
+}
+
+/** Translation key mapping for settings item labels and descriptions */
+const SETTINGS_I18N_MAP: Record<string, { label: string; desc: string }> = {
+  app: { label: 'settingsNav.app', desc: 'settingsNav.appDesc' },
+  workspace: { label: 'settingsNav.workspace', desc: 'settingsNav.workspaceDesc' },
+  appearance: { label: 'settingsNav.appearance', desc: 'settingsNav.appearanceDesc' },
+  input: { label: 'settingsNav.input', desc: 'settingsNav.inputDesc' },
+  permissions: { label: 'settingsNav.permissions', desc: 'settingsNav.permissionsDesc' },
+  labels: { label: 'settingsNav.labels', desc: 'settingsNav.labelsDesc' },
+  shortcuts: { label: 'settingsNav.shortcuts', desc: 'settingsNav.shortcutsDesc' },
+  skills: { label: 'settingsNav.skills', desc: 'settingsNav.skillsDesc' },
+  providers: { label: 'settingsNav.providers', desc: 'settingsNav.providersDesc' },
+}
+
+interface SettingsItemRowProps {
+  item: SettingsItem
+  isSelected: boolean
+  isFirst: boolean
+  onSelect: () => void
+}
+
+/**
+ * SettingsItemRow - Individual settings item
+ */
+function SettingsItemRow({ item, isSelected, isFirst, onSelect }: SettingsItemRowProps) {
+  const Icon = item.icon
+
+  return (
+    <div className="settings-item" data-selected={isSelected || undefined}>
+      {/* Separator - only show if not first */}
+      {!isFirst && (
+        <div className="settings-separator pl-12 pr-4">
+          <Separator />
+        </div>
+      )}
+      {/* Wrapper for button with proper margins */}
+      <div className="settings-content relative select-none pl-2 mr-2">
+        {/* Icon - positioned absolutely for consistent alignment */}
+        <div className="absolute left-[20px] top-[14px] z-10">
+          <Icon
+            className={cn(
+              'w-4 h-4 shrink-0',
+              isSelected ? 'text-foreground' : 'text-muted-foreground'
+            )}
+          />
+        </div>
+        {/* Main content button */}
+        <button
+          type="button"
+          onClick={onSelect}
+          className={cn(
+            'flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]',
+            // Fast hover transition (75ms vs default 150ms)
+            'transition-[background-color] duration-75',
+            isSelected
+              ? 'bg-foreground/5 hover:bg-foreground/7'
+              : 'hover:bg-foreground/2'
+          )}
+        >
+          {/* Spacer for icon */}
+          <div className="w-6 h-5 shrink-0" />
+          {/* Content column */}
+          <div className="flex flex-col min-w-0 flex-1">
+            <span
+              className={cn(
+                'font-medium',
+                isSelected ? 'text-foreground' : 'text-foreground/80'
+              )}
+            >
+              {item.label}
+            </span>
+            <span className="text-xs text-foreground/60 line-clamp-1">
+              {item.description}
+            </span>
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function SettingsNavigator({
+  selectedSubpage,
+  onSelectSubpage,
+}: SettingsNavigatorProps) {
+  const { t } = useTranslation()
+
+  // Build translated settings items from shared schema
+  const settingsItems: SettingsItem[] = useMemo(() =>
+    SETTINGS_ITEMS.map((item) => {
+      const i18nKeys = SETTINGS_I18N_MAP[item.id]
+      return {
+        id: item.id,
+        label: i18nKeys ? t(i18nKeys.label) : item.label,
+        icon: SETTINGS_ICONS[item.id],
+        description: i18nKeys ? t(i18nKeys.desc) : item.description,
+      }
+    }),
+    [t]
+  )
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="pt-2">
+          {settingsItems.map((item, index) => (
+            <SettingsItemRow
+              key={item.id}
+              item={item}
+              isSelected={selectedSubpage === item.id}
+              isFirst={index === 0}
+              onSelect={() => onSelectSubpage(item.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

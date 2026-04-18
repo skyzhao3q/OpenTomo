@@ -1,0 +1,26 @@
+{
+  "name": "Horizon",
+  "description": "Warm sunset palette with rosy pink accents",
+  "shikiTheme": {
+    "light": "github-light",
+    "dark": "horizon"
+  },
+  "background": "oklch(0.965 0.015 33.1)",
+  "foreground": "oklch(0.237 0.016 274.1)",
+  "accent": "oklch(0.567 0.222 18.8)",
+  "destructive": "oklch(0.567 0.222 18.8)",
+  "paper": "oklch(0.913 0.038 36.2)",
+  "navigator": "oklch(0.913 0.038 36.2)",
+  "popover": "oklch(0.913 0.038 36.2)",
+  "popoverSolid": "oklch(0.913 0.038 36.2)",
+  "dark": {
+    "background": "oklch(0.237 0.016 274.1)",
+    "foreground": "oklch(0.880 0.004 236.5)",
+    "accent": "oklch(0.653 0.186 9.0)",
+    "destructive": "oklch(0.653 0.186 9.0)",
+    "paper": "oklch(0.267 0.021 276.8)",
+    "navigator": "oklch(0.237 0.016 274.1)",
+    "popover": "oklch(0.267 0.021 276.8)",
+    "popoverSolid": "oklch(0.267 0.021 276.8)"
+  }
+}

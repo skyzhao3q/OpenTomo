@@ -1,0 +1,1440 @@
+// Types shared between main and renderer processes
+// Core types are re-exported from @opentomo/core
+
+// Import and re-export core types
+import type {
+  Message as CoreMessage,
+  MessageRole as CoreMessageRole,
+  TypedError,
+  TokenUsage as CoreTokenUsage,
+  Workspace as CoreWorkspace,
+  SessionMetadata as CoreSessionMetadata,
+  StoredAttachment as CoreStoredAttachment,
+  ContentBadge,
+  ToolDisplayMeta,
+} from '@opentomo/core/types';
+
+// Import mode types from dedicated subpath export (avoids pulling in SDK)
+import type { PermissionMode } from '@opentomo/shared/agent/modes';
+export type { PermissionMode };
+export { PERMISSION_MODE_CONFIG } from '@opentomo/shared/agent/modes';
+
+// Import thinking level types
+import type { ThinkingLevel } from '@opentomo/shared/agent/thinking-levels';
+export type { ThinkingLevel };
+export { THINKING_LEVELS, DEFAULT_THINKING_LEVEL } from '@opentomo/shared/agent/thinking-levels';
+
+export type {
+  CoreMessage as Message,
+  CoreMessageRole as MessageRole,
+  TypedError,
+  CoreTokenUsage as TokenUsage,
+  CoreWorkspace as Workspace,
+  CoreSessionMetadata as SessionMetadata,
+  CoreStoredAttachment as StoredAttachment,
+  ContentBadge,
+  ToolDisplayMeta,
+};
+
+// Import and re-export auth types for onboarding
+// Use types-only subpaths to avoid pulling in Node.js dependencies
+import type { AuthState, SetupNeeds } from '@opentomo/shared/auth/types';
+import type { AuthType } from '@opentomo/shared/config/types';
+export type { AuthType };
+export type { AuthState, SetupNeeds };
+
+// Import skill types
+import type { LoadedSkill, SkillMetadata } from '@opentomo/shared/skills';
+export type { LoadedSkill, SkillMetadata };
+
+// Import command types
+import type { LoadedCommand, CommandMetadata } from '@opentomo/shared/commands';
+export type { LoadedCommand, CommandMetadata };
+
+/**
+ * File/directory entry in a skill folder
+ */
+export interface SkillFile {
+  name: string
+  type: 'file' | 'directory'
+  size?: number
+  children?: SkillFile[]
+}
+
+/**
+ * File/directory entry in a session folder
+ * Supports recursive tree structure with children for directories
+ */
+export interface SessionFile {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  size?: number
+  children?: SessionFile[]  // Recursive children for directories
+}
+
+/**
+ * File search result for @ mention file selection.
+ * Returned by FS_SEARCH IPC handler when user types @filename in input.
+ */
+export interface FileSearchResult {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  relativePath: string  // Path relative to search base
+}
+
+// Import auth request types for unified auth flow
+import type { AuthRequest as SharedAuthRequest, CredentialInputMode as SharedCredentialInputMode, CredentialAuthRequest as SharedCredentialAuthRequest } from '@opentomo/shared/agent';
+export type { SharedAuthRequest as AuthRequest };
+export type { SharedCredentialInputMode as CredentialInputMode };
+// CredentialRequest is used by UI components for displaying credential input
+export type CredentialRequest = SharedCredentialAuthRequest;
+export { generateMessageId } from '@opentomo/core/types';
+
+
+/**
+ * Search match result for session content search
+ */
+export interface SessionSearchMatch {
+  /** Session ID */
+  sessionId: string
+  /** Line number in the JSONL file */
+  lineNumber: number
+  /** The matched text snippet with context */
+  snippet: string
+}
+
+/**
+ * Aggregated search results for a session
+ */
+export interface SessionSearchResult {
+  /** Session ID */
+  sessionId: string
+  /** Number of matches found in this session */
+  matchCount: number
+  /** First few matches with context snippets */
+  matches: SessionSearchMatch[]
+}
+
+/**
+ * Result of refreshing/regenerating a session title
+ */
+export interface RefreshTitleResult {
+  success: boolean
+  title?: string
+  error?: string
+}
+
+
+// Re-export permission types from core, extended with sessionId for multi-session context
+export type { PermissionRequest as BasePermissionRequest } from '@opentomo/core/types';
+import type { PermissionRequest as BasePermissionRequest } from '@opentomo/core/types';
+
+/**
+ * Permission request with session context (for multi-session Electron app)
+ */
+export interface PermissionRequest extends BasePermissionRequest {
+  sessionId: string
+}
+
+// ============================================
+// Credential Input Types (Secure Auth UI)
+// ============================================
+
+// CredentialInputMode is imported from @opentomo/shared/agent above
+
+/**
+ * Credential response from user (for credential auth requests)
+ */
+export interface CredentialResponse {
+  type: 'credential'
+  /** Single value for bearer/header/query modes */
+  value?: string
+  /** Username for basic auth */
+  username?: string
+  /** Password for basic auth */
+  password?: string
+  /** Header values for multi-header mode (e.g., { "DD-API-KEY": "...", "DD-APPLICATION-KEY": "..." }) */
+  headers?: Record<string, string>
+  /** Whether user cancelled */
+  cancelled: boolean
+}
+
+// ============================================
+// Plan Types (SubmitPlan workflow)
+// ============================================
+
+/**
+ * Step in a plan
+ */
+export interface PlanStep {
+  id: string
+  description: string
+  tools?: string[]
+  status?: 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
+}
+
+/**
+ * Plan from the agent
+ */
+export interface Plan {
+  id: string
+  title: string
+  summary?: string
+  steps: PlanStep[]
+  questions?: string[]
+  state?: 'creating' | 'refining' | 'ready' | 'executing' | 'completed' | 'cancelled'
+  createdAt?: number
+  updatedAt?: number
+}
+
+
+// ============================================
+// Onboarding Types
+// ============================================
+
+/**
+ * Git Bash detection status (Windows only)
+ */
+export interface GitBashStatus {
+  found: boolean
+  path: string | null
+  platform: 'win32' | 'darwin' | 'linux'
+}
+
+/**
+ * Single prerequisite check status
+ */
+export interface PrerequisiteStatus {
+  name: 'bun' | 'node' | 'git'
+  found: boolean
+  version: string | null
+  path: string | null
+  /** Only for Node.js: whether version meets minimum requirement (18+) */
+  meetsMinimum?: boolean
+  /** Only for Node.js: minimum required version */
+  minimumVersion?: string
+}
+
+/**
+ * Aggregated prerequisites check result
+ */
+export interface PrerequisitesCheckResult {
+  platform: 'win32' | 'darwin' | 'linux'
+  allSatisfied: boolean
+  prerequisites: PrerequisiteStatus[]
+}
+
+/**
+ * Result of saving onboarding configuration
+ */
+export interface OnboardingSaveResult {
+  success: boolean
+  error?: string
+  workspaceId?: string
+}
+
+/**
+ * File attachment for sending with messages
+ * Matches the FileAttachment interface from src/utils/files.ts
+ */
+export interface FileAttachment {
+  type: 'image' | 'text' | 'pdf' | 'office' | 'unknown'
+  path: string
+  name: string
+  mimeType: string
+  base64?: string  // For images, PDFs, and Office files
+  text?: string    // For text files
+  size: number
+  thumbnailBase64?: string  // Quick Look thumbnail (generated by Electron main process)
+}
+
+// Import types needed for Session interface
+import type { Message } from '@opentomo/core/types';
+
+/**
+ * Electron-specific Session type (includes runtime state)
+ * Extends core Session with messages array and processing state
+ */
+export interface Session {
+  id: string
+  workspaceId: string
+  workspaceName: string
+  name?: string  // User-defined or AI-generated session name
+  /** Preview of first user message (from JSONL header, for lazy-loaded sessions) */
+  preview?: string
+  lastMessageAt: number
+  messages: Message[]
+  isProcessing: boolean
+  // Session metadata
+  isFlagged?: boolean
+  // Advanced options (persisted per session)
+  /** Permission mode for this session ('safe', 'ask', 'allow-all') */
+  permissionMode?: PermissionMode
+  // Read/unread tracking - ID of last message user has read
+  lastReadMessageId?: string
+  /**
+   * Explicit unread flag - single source of truth for NEW badge.
+   * Set to true when assistant message completes while user is NOT viewing.
+   * Set to false when user views the session (and not processing).
+   */
+  hasUnread?: boolean
+  // Working directory for this session (used by agent for bash commands)
+  workingDirectory?: string
+  // Session folder path (for "Reset to Session Root" option)
+  sessionFolderPath?: string
+  // Model to use for this session (overrides global config if set)
+  model?: string
+  // Thinking level for this session ('off', 'think', 'max')
+  thinkingLevel?: ThinkingLevel
+  // Role/type of the last message (for badge display without loading messages)
+  lastMessageRole?: 'user' | 'assistant' | 'plan' | 'tool' | 'error'
+  // ID of the last final (non-intermediate) assistant message - pre-computed for unread detection
+  lastFinalMessageId?: string
+  // Whether an async operation is ongoing (sharing, updating share, revoking, title regeneration)
+  // Used for shimmer effect on session title in sidebar and panel header
+  isAsyncOperationOngoing?: boolean
+  /** @deprecated Use isAsyncOperationOngoing instead */
+  isRegeneratingTitle?: boolean
+  // Current status for ProcessingIndicator (e.g., compacting)
+  currentStatus?: {
+    message: string
+    statusType?: string
+  }
+  // When the session was first created (ms timestamp)
+  createdAt?: number
+  // Total message count (pre-computed in JSONL header)
+  messageCount?: number
+  // Token usage for context tracking
+  tokenUsage?: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+    contextTokens: number
+    costUsd: number
+    cacheReadTokens?: number
+    cacheCreationTokens?: number
+    /** Model's context window size in tokens (from SDK modelUsage) */
+    contextWindow?: number
+  }
+  /** When true, session is hidden from session list (e.g., mini edit sessions) */
+  hidden?: boolean
+  /** Project ID this session belongs to (null/undefined = uncategorized) */
+  projectId?: string | null
+}
+
+/**
+ * Options for creating a new session
+ * Note: Session creation itself has no options - auto-send is handled by NavigationContext
+ */
+export interface CreateSessionOptions {
+  /** Initial permission mode for the session (overrides workspace default) */
+  permissionMode?: PermissionMode
+  /**
+   * Working directory for the session:
+   * - 'user_default' or undefined: Use workspace's configured default working directory
+   * - 'none': No working directory (session folder only)
+   * - Absolute path string: Use this specific path
+   */
+  workingDirectory?: string | 'user_default' | 'none'
+  /** Model override for the session (e.g., 'haiku', 'sonnet') */
+  model?: string
+  /** System prompt preset for the session ('default' | 'mini' or custom string) */
+  systemPromptPreset?: 'default' | 'mini' | string
+  /** When true, session won't appear in session list (e.g., mini edit sessions) */
+  hidden?: boolean
+  /** Whether the session should be flagged */
+  isFlagged?: boolean
+}
+
+// Events sent from main to renderer
+// turnId: Correlation ID from the API's message.id, groups all events in an assistant turn
+export type SessionEvent =
+  | { type: 'text_delta'; sessionId: string; delta: string; turnId?: string }
+  | { type: 'text_complete'; sessionId: string; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string }
+  | { type: 'tool_start'; sessionId: string; toolName: string; toolUseId: string; toolInput: Record<string, unknown>; toolIntent?: string; toolDisplayName?: string; toolDisplayMeta?: import('@opentomo/core').ToolDisplayMeta; turnId?: string; parentToolUseId?: string }
+  | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean }
+  | { type: 'error'; sessionId: string; error: string }
+  | { type: 'typed_error'; sessionId: string; error: TypedError }
+  | { type: 'complete'; sessionId: string; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean }
+  | { type: 'interrupted'; sessionId: string; message?: Message }
+  | { type: 'status'; sessionId: string; message: string; statusType?: 'compacting' }
+  | { type: 'info'; sessionId: string; message: string; statusType?: 'compaction_complete'; level?: 'info' | 'warning' | 'error' | 'success' }
+  | { type: 'title_generated'; sessionId: string; title: string }
+  | { type: 'title_regenerating'; sessionId: string; isRegenerating: boolean }
+  // Generic async operation state (sharing, updating share, revoking, title regeneration)
+  | { type: 'async_operation'; sessionId: string; isOngoing: boolean }
+  | { type: 'working_directory_changed'; sessionId: string; workingDirectory: string }
+  | { type: 'permission_request'; sessionId: string; request: PermissionRequest }
+  | { type: 'credential_request'; sessionId: string; request: CredentialRequest }
+  // Permission mode events
+  | { type: 'permission_mode_changed'; sessionId: string; permissionMode: PermissionMode }
+  | { type: 'plan_submitted'; sessionId: string; message: CoreMessage }
+  | { type: 'project_changed'; sessionId: string; projectId: string | null }
+  // Background task/shell events
+  | { type: 'task_backgrounded'; sessionId: string; toolUseId: string; taskId: string; intent?: string; turnId?: string }
+  | { type: 'shell_backgrounded'; sessionId: string; toolUseId: string; shellId: string; intent?: string; command?: string; turnId?: string }
+  | { type: 'task_progress'; sessionId: string; toolUseId: string; elapsedSeconds: number; turnId?: string }
+  | { type: 'shell_killed'; sessionId: string; shellId: string }
+  // User message events (for optimistic UI with backend as source of truth)
+  | { type: 'user_message'; sessionId: string; message: Message; status: 'accepted' | 'queued' | 'processing' }
+  // Session metadata events (for multi-window sync)
+  | { type: 'session_flagged'; sessionId: string }
+  | { type: 'session_unflagged'; sessionId: string }
+  | { type: 'name_changed'; sessionId: string; name?: string }
+  | { type: 'session_model_changed'; sessionId: string; model: string | null }
+  | { type: 'session_deleted'; sessionId: string }
+  // Auth request events (unified auth flow)
+  | { type: 'auth_request'; sessionId: string; message: CoreMessage; request: SharedAuthRequest }
+  | { type: 'auth_completed'; sessionId: string; requestId: string; success: boolean; cancelled?: boolean; error?: string }
+  // Source activation events (for auto-retry on mid-turn activation)
+  | { type: 'source_activated'; sessionId: string; sourceSlug: string; originalMessage: string }
+  // Real-time usage update during processing (for context display)
+  | { type: 'usage_update'; sessionId: string; tokenUsage: { inputTokens: number; contextWindow?: number } }
+
+// Options for sendMessage
+export interface SendMessageOptions {
+  /** Skill slugs to activate for this message (from @mentions) */
+  skillSlugs?: string[]
+  /** Content badges for inline display (sources, skills with embedded icons) */
+  badges?: import('@opentomo/core').ContentBadge[]
+  /** Enable Design Agent mode (image generation system prompt injection) */
+  designAgentEnabled?: boolean
+}
+
+// =============================================================================
+// IPC Command Pattern Types
+// =============================================================================
+
+/**
+ * SessionCommand - Consolidated session operations
+ * Replaces individual IPC calls: flag, unflag, rename, etc.
+ */
+export type SessionCommand =
+  | { type: 'flag' }
+  | { type: 'unflag' }
+  | { type: 'rename'; name: string }
+  | { type: 'markRead' }
+  | { type: 'markUnread' }
+  /** Track which session user is actively viewing (for unread state machine) */
+  | { type: 'setActiveViewing'; workspaceId: string }
+  | { type: 'setPermissionMode'; mode: PermissionMode }
+  | { type: 'setThinkingLevel'; level: ThinkingLevel }
+  | { type: 'updateWorkingDirectory'; dir: string }
+  | { type: 'setProject'; projectId: string | null }
+  | { type: 'showInFinder' }
+  | { type: 'copyPath' }
+  | { type: 'startOAuth'; requestId: string }
+  | { type: 'refreshTitle' }
+  // Pending plan execution (Accept & Compact flow)
+  | { type: 'setPendingPlanExecution'; planPath: string }
+  | { type: 'markCompactionComplete' }
+  | { type: 'clearPendingPlanExecution' }
+
+/**
+ * Parameters for opening a new chat session
+ */
+export interface NewChatActionParams {
+  /** Text to pre-fill in the input (not sent automatically) */
+  input?: string
+  /** Session name */
+  name?: string
+}
+
+// IPC channel names
+export const IPC_CHANNELS = {
+  // Session management
+  GET_SESSIONS: 'sessions:get',
+  CREATE_SESSION: 'sessions:create',
+  DELETE_SESSION: 'sessions:delete',
+  GET_SESSION_MESSAGES: 'sessions:getMessages',
+  SEND_MESSAGE: 'sessions:sendMessage',
+  CANCEL_PROCESSING: 'sessions:cancel',
+  KILL_SHELL: 'sessions:killShell',
+  GET_TASK_OUTPUT: 'tasks:getOutput',
+  RESPOND_TO_PERMISSION: 'sessions:respondToPermission',
+  RESPOND_TO_CREDENTIAL: 'sessions:respondToCredential',
+
+  // Consolidated session command
+  SESSION_COMMAND: 'sessions:command',
+
+  // Pending plan execution (for reload recovery)
+  GET_PENDING_PLAN_EXECUTION: 'sessions:getPendingPlanExecution',
+
+  // Workspace management
+  GET_WORKSPACES: 'workspaces:get',
+  CREATE_WORKSPACE: 'workspaces:create',
+  CHECK_WORKSPACE_SLUG: 'workspaces:checkSlug',
+
+  // Window management
+  GET_WINDOW_WORKSPACE: 'window:getWorkspace',
+  GET_WINDOW_MODE: 'window:getMode',
+  OPEN_WORKSPACE: 'window:openWorkspace',
+  OPEN_SESSION_IN_NEW_WINDOW: 'window:openSessionInNewWindow',
+  SWITCH_WORKSPACE: 'window:switchWorkspace',
+  CLOSE_WINDOW: 'window:close',
+  // Close request events (main → renderer, for intercepting X button / Cmd+W)
+  WINDOW_CLOSE_REQUESTED: 'window:closeRequested',
+  WINDOW_CONFIRM_CLOSE: 'window:confirmClose',
+  // Traffic light visibility (macOS only - hide when fullscreen overlays are open)
+  WINDOW_SET_TRAFFIC_LIGHTS: 'window:setTrafficLights',
+
+  // Events from main to renderer
+  SESSION_EVENT: 'session:event',
+  // Sent after loadSessionsFromDisk() completes — renderer can re-fetch if it got an empty list
+  SESSIONS_INITIALIZED: 'sessions:initialized',
+
+  // File operations
+  READ_FILE: 'file:read',
+  READ_FILE_DATA_URL: 'file:readDataUrl',
+  READ_FILE_BINARY: 'file:readBinary',
+  OPEN_FILE_DIALOG: 'file:openDialog',
+  OPEN_AND_READ_FILE_ATTACHMENTS: 'file:openAndReadAttachments',
+  READ_FILE_ATTACHMENT: 'file:readAttachment',
+  STORE_ATTACHMENT: 'file:storeAttachment',
+  GENERATE_THUMBNAIL: 'file:generateThumbnail',
+
+  // Filesystem search (for @ mention file selection)
+  FS_SEARCH: 'fs:search',
+  // Filesystem mutations (for Explorer context menu)
+  FS_MKDIR:  'fs:mkdir',
+  FS_RENAME: 'fs:rename',
+  FS_DELETE: 'fs:delete',
+  // Debug logging from renderer → main log file
+  DEBUG_LOG: 'debug:log',
+
+  // Session info panel
+  GET_SESSION_FILES: 'sessions:getFiles',
+  GET_SESSION_NOTES: 'sessions:getNotes',
+  SET_SESSION_NOTES: 'sessions:setNotes',
+  WATCH_SESSION_FILES: 'sessions:watchFiles',      // Start watching session directory
+  UNWATCH_SESSION_FILES: 'sessions:unwatchFiles',  // Stop watching
+  SESSION_FILES_CHANGED: 'sessions:filesChanged',  // Event: main → renderer
+
+  // Directory file explorer (for working directory)
+  GET_DIRECTORY_FILES: 'directory:getFiles',
+  WATCH_DIRECTORY_FILES: 'directory:watchFiles',
+  UNWATCH_DIRECTORY_FILES: 'directory:unwatchFiles',
+  DIRECTORY_FILES_CHANGED: 'directory:filesChanged',  // Event: main → renderer
+
+  // Theme
+  GET_SYSTEM_THEME: 'theme:getSystemPreference',
+  SYSTEM_THEME_CHANGED: 'theme:systemChanged',
+
+  // System
+  GET_VERSIONS: 'system:versions',
+  GET_HOME_DIR: 'system:homeDir',
+  IS_DEBUG_MODE: 'system:isDebugMode',
+
+  // Auto-update
+  UPDATE_CHECK: 'update:check',
+  UPDATE_GET_INFO: 'update:getInfo',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_DISMISS: 'update:dismiss',  // Dismiss update for this version (persists across restarts)
+  UPDATE_GET_DISMISSED: 'update:getDismissed',  // Get dismissed version
+  UPDATE_AVAILABLE: 'update:available',  // main → renderer broadcast
+  UPDATE_DOWNLOAD_PROGRESS: 'update:downloadProgress',  // main → renderer broadcast
+
+  // Shell operations (open external URLs/files)
+  OPEN_URL: 'shell:openUrl',
+  OPEN_FILE: 'shell:openFile',
+  SHOW_IN_FOLDER: 'shell:showInFolder',
+  // Reveal any absolute path in system file explorer (no home-dir restriction — safe UI-only op)
+  REVEAL_IN_EXPLORER: 'shell:revealInExplorer',
+
+  // Menu actions (main → renderer)
+  MENU_NEW_CHAT: 'menu:newChat',
+  MENU_NEW_WINDOW: 'menu:newWindow',
+  MENU_OPEN_SETTINGS: 'menu:openSettings',
+  MENU_KEYBOARD_SHORTCUTS: 'menu:keyboardShortcuts',
+  MENU_TOGGLE_FOCUS_MODE: 'menu:toggleFocusMode',
+  MENU_TOGGLE_SIDEBAR: 'menu:toggleSidebar',
+  // Deep link navigation (main → renderer, for external opentomo:// URLs)
+  DEEP_LINK_NAVIGATE: 'deeplink:navigate',
+
+  // Auth
+  LOGOUT: 'auth:logout',
+  SHOW_LOGOUT_CONFIRMATION: 'auth:showLogoutConfirmation',
+  SHOW_DELETE_SESSION_CONFIRMATION: 'auth:showDeleteSessionConfirmation',
+
+  // Onboarding
+  ONBOARDING_GET_AUTH_STATE: 'onboarding:getAuthState',
+  ONBOARDING_SAVE_CONFIG: 'onboarding:saveConfig',
+  // Claude OAuth (two-step flow)
+  ONBOARDING_START_CLAUDE_OAUTH: 'onboarding:startClaudeOAuth',
+  ONBOARDING_EXCHANGE_CLAUDE_CODE: 'onboarding:exchangeClaudeCode',
+  ONBOARDING_HAS_CLAUDE_OAUTH_STATE: 'onboarding:hasClaudeOAuthState',
+  ONBOARDING_CLEAR_CLAUDE_OAUTH_STATE: 'onboarding:clearClaudeOAuthState',
+
+  // Settings - API Setup
+  SETTINGS_GET_API_SETUP: 'settings:getApiSetup',
+  SETTINGS_UPDATE_API_SETUP: 'settings:updateApiSetup',
+  SETTINGS_TEST_API_CONNECTION: 'settings:testApiConnection',
+  SETTINGS_GET_CLAUDE_OAUTH_STATUS: 'settings:getClaudeOAuthStatus',
+  SETTINGS_ACTIVATE_CLAUDE_OAUTH: 'settings:activateClaudeOAuth',
+  SETTINGS_DISCONNECT_CLAUDE_OAUTH: 'settings:disconnectClaudeOAuth',
+
+  // Settings - Model
+  SETTINGS_GET_MODEL: 'settings:getModel',
+  SETTINGS_SET_MODEL: 'settings:setModel',
+  SETTINGS_GET_DEFAULT_CHAT_MODE: 'settings:getDefaultChatMode',
+  SETTINGS_SET_DEFAULT_CHAT_MODE: 'settings:setDefaultChatMode',
+  SESSION_GET_MODEL: 'session:getModel',
+  SESSION_SET_MODEL: 'session:setModel',
+
+  // Settings - Provider
+  SETTINGS_GET_PROVIDER: 'settings:getProvider',
+  SETTINGS_SET_PROVIDER: 'settings:setProvider',
+
+  // Provider Connections (multi-connection management)
+  CONNECTIONS_LIST: 'connections:list',
+  CONNECTIONS_ADD: 'connections:add',
+  CONNECTIONS_UPDATE: 'connections:update',
+  CONNECTIONS_DELETE: 'connections:delete',
+  CONNECTIONS_SET_ACTIVE: 'connections:setActive',
+  CONNECTIONS_GET_ACTIVE: 'connections:getActive',
+  CONNECTIONS_TEST: 'connections:test',
+  CONNECTIONS_GET_API_KEY: 'connections:getApiKey',
+
+  // Folder dialog (for selecting working directory)
+  OPEN_FOLDER_DIALOG: 'dialog:openFolder',
+
+  // User Preferences (diff viewer settings only)
+  PREFERENCES_READ: 'preferences:read',
+  PREFERENCES_WRITE: 'preferences:write',
+
+  // USER.md
+  USERMD_READ: 'usermd:read',
+  USERMD_WRITE: 'usermd:write',
+
+  // Session Drafts (input text persisted across app restarts)
+  DRAFTS_GET: 'drafts:get',
+  DRAFTS_SET: 'drafts:set',
+  DRAFTS_DELETE: 'drafts:delete',
+  DRAFTS_GET_ALL: 'drafts:getAll',
+
+  // Workspace permissions config (for Explore mode)
+  WORKSPACE_GET_PERMISSIONS: 'workspace:getPermissions',
+  // Default permissions from ~/.opentomo/permissions/default.json
+  DEFAULT_PERMISSIONS_GET: 'permissions:getDefaults',
+  // Broadcast when default permissions change (file watcher)
+  DEFAULT_PERMISSIONS_CHANGED: 'permissions:defaultsChanged',
+
+  // Session content search (full-text via ripgrep)
+  SEARCH_SESSIONS: 'sessions:searchContent',
+
+  // Skills (workspace-scoped)
+  SKILLS_GET: 'skills:get',
+  SKILLS_GET_FILES: 'skills:getFiles',
+  SKILLS_DELETE: 'skills:delete',
+  SKILLS_OPEN_EDITOR: 'skills:openEditor',
+  SKILLS_OPEN_FINDER: 'skills:openFinder',
+  SKILLS_CHANGED: 'skills:changed',
+  SKILLS_GET_CATALOG: 'skills:getCatalog',
+  SKILLS_TOGGLE_ENABLED: 'skills:toggleEnabled',
+  SKILLS_OPEN_SKILLS_DIR: 'skills:openSkillsDir',
+  SKILLS_DISABLED_CHANGED: 'skills:disabledChanged',
+  SKILLS_IMPORT_PICK_FOLDER: 'skills:importPickFolder',
+
+  // Commands (workspace-scoped)
+  COMMANDS_GET: 'commands:get',
+  COMMANDS_SAVE: 'commands:save',
+  COMMANDS_DELETE: 'commands:delete',
+  COMMANDS_OPEN_EDITOR: 'commands:openEditor',
+  COMMANDS_OPEN_FINDER: 'commands:openFinder',
+  COMMANDS_CHANGED: 'commands:changed',
+
+  // Project management (workspace-scoped)
+  PROJECTS_LIST: 'projects:list',
+  PROJECTS_CREATE: 'projects:create',
+  PROJECTS_UPDATE: 'projects:update',
+  PROJECTS_DELETE: 'projects:delete',
+  PROJECTS_REORDER: 'projects:reorder',
+  PROJECTS_CHANGED: 'projects:changed',  // Broadcast event
+  SMART_CATEGORIZE: 'projects:smartCategorize',
+
+  // Views management (workspace-scoped, stored in views.json)
+  VIEWS_LIST: 'views:list',
+  VIEWS_SAVE: 'views:save',
+
+  // Theme management (cascading: app → workspace)
+  THEME_APP_CHANGED: 'theme:appChanged',        // Broadcast event
+
+  // Generic workspace image loading/saving (for icons, etc.)
+  WORKSPACE_READ_IMAGE: 'workspace:readImage',
+  WORKSPACE_WRITE_IMAGE: 'workspace:writeImage',
+
+  // Workspace settings (per-workspace configuration)
+  WORKSPACE_SETTINGS_GET: 'workspaceSettings:get',
+  WORKSPACE_SETTINGS_UPDATE: 'workspaceSettings:update',
+
+  // Workspace environment variables (.env file)
+  WORKSPACE_ENV_GET: 'workspace:env:get',
+  WORKSPACE_ENV_SAVE: 'workspace:env:save',
+
+  // Theme (app-level default)
+  THEME_GET_APP: 'theme:getApp',
+  THEME_SAVE_APP: 'theme:saveApp',
+  THEME_CREATE_PRESET: 'theme:createPreset',
+  THEME_GET_PRESETS: 'theme:getPresets',
+  THEME_LOAD_PRESET: 'theme:loadPreset',
+  THEME_GET_COLOR_THEME: 'theme:getColorTheme',
+  THEME_SET_COLOR_THEME: 'theme:setColorTheme',
+  THEME_BROADCAST_PREFERENCES: 'theme:broadcastPreferences',  // Send preferences to main for broadcast
+  THEME_PREFERENCES_CHANGED: 'theme:preferencesChanged',  // Broadcast: preferences changed in another window
+
+  // Workspace-level theme overrides
+  THEME_GET_WORKSPACE_COLOR_THEME: 'theme:getWorkspaceColorTheme',
+  THEME_SET_WORKSPACE_COLOR_THEME: 'theme:setWorkspaceColorTheme',
+  THEME_GET_ALL_WORKSPACE_THEMES: 'theme:getAllWorkspaceThemes',
+  THEME_BROADCAST_WORKSPACE_THEME: 'theme:broadcastWorkspaceTheme',  // Send workspace theme change to main for broadcast
+  THEME_WORKSPACE_THEME_CHANGED: 'theme:workspaceThemeChanged',  // Broadcast: workspace theme changed in another window
+
+  // Tool icon mappings (for Appearance settings)
+  TOOL_ICONS_GET_MAPPINGS: 'toolIcons:getMappings',
+
+  // Logo URL resolution (uses Node.js filesystem cache)
+  LOGO_GET_URL: 'logo:getUrl',
+
+  // Notifications
+  NOTIFICATION_SHOW: 'notification:show',
+  NOTIFICATION_NAVIGATE: 'notification:navigate',  // Broadcast: { workspaceId, sessionId }
+  NOTIFICATION_GET_ENABLED: 'notification:getEnabled',
+  NOTIFICATION_SET_ENABLED: 'notification:setEnabled',
+
+  // Input settings
+  INPUT_GET_AUTO_CAPITALISATION: 'input:getAutoCapitalisation',
+  INPUT_SET_AUTO_CAPITALISATION: 'input:setAutoCapitalisation',
+  INPUT_GET_SEND_MESSAGE_KEY: 'input:getSendMessageKey',
+  INPUT_SET_SEND_MESSAGE_KEY: 'input:setSendMessageKey',
+  INPUT_GET_SPELL_CHECK: 'input:getSpellCheck',
+  INPUT_SET_SPELL_CHECK: 'input:setSpellCheck',
+
+  BADGE_UPDATE: 'badge:update',
+  BADGE_CLEAR: 'badge:clear',
+  BADGE_SET_ICON: 'badge:setIcon',
+  BADGE_DRAW: 'badge:draw',  // Broadcast: { count: number, iconDataUrl: string }
+  WINDOW_FOCUS_STATE: 'window:focusState',  // Broadcast: boolean (isFocused)
+  WINDOW_GET_FOCUS_STATE: 'window:getFocusState',
+
+  // Git operations
+  GET_GIT_BRANCH: 'git:getBranch',
+
+  // Cost Tracking
+  COST_GET_STATS: 'cost:getStats',
+
+  // Git Bash (Windows)
+  GITBASH_CHECK: 'gitbash:check',
+  GITBASH_BROWSE: 'gitbash:browse',
+  GITBASH_SET_PATH: 'gitbash:setPath',
+
+  // Prerequisites checking (all platforms)
+  PREREQUISITES_CHECK: 'prerequisites:check',
+
+  // Menu actions (renderer → main for window/app control)
+  MENU_QUIT: 'menu:quit',
+  MENU_MINIMIZE: 'menu:minimize',
+  MENU_MAXIMIZE: 'menu:maximize',
+  MENU_ZOOM_IN: 'menu:zoomIn',
+  MENU_ZOOM_OUT: 'menu:zoomOut',
+  MENU_ZOOM_RESET: 'menu:zoomReset',
+  MENU_TOGGLE_DEVTOOLS: 'menu:toggleDevTools',
+  MENU_UNDO: 'menu:undo',
+  MENU_REDO: 'menu:redo',
+  MENU_CUT: 'menu:cut',
+  MENU_COPY: 'menu:copy',
+  MENU_PASTE: 'menu:paste',
+  MENU_SELECT_ALL: 'menu:selectAll',
+
+  // Terminal (PTY)
+  TERMINAL_CREATE: 'terminal:create',   // invoke → returns ptyId: string
+  TERMINAL_WRITE:  'terminal:write',    // send (fire-and-forget, high-freq)
+  TERMINAL_RESIZE: 'terminal:resize',   // invoke
+  TERMINAL_KILL:   'terminal:kill',     // invoke
+  TERMINAL_DATA:   'terminal:data',     // Push: Main → Renderer
+  TERMINAL_EXIT:   'terminal:exit',     // Push: Main → Renderer
+} as const
+
+// Re-import types for ElectronAPI
+import type { Workspace, SessionMetadata, StoredAttachment as StoredAttachmentType } from '@opentomo/core/types';
+
+/** A named, user-created AI provider connection (mirrors ProviderConnection from @opentomo/shared) */
+export interface ProviderConnection {
+  id: string
+  name: string
+  type: string
+  endpoint: string
+  models: { best?: string; balanced?: string; fast?: string }
+  createdAt: number
+}
+
+/** Tool icon mapping entry from tool-icons.json (with icon resolved to data URL) */
+export interface ToolIconMapping {
+  id: string
+  displayName: string
+  /** Data URL of the icon (e.g., data:image/png;base64,...) */
+  iconDataUrl: string
+  commands: string[]
+}
+
+// Type-safe IPC API exposed to renderer
+export interface ElectronAPI {
+  // Session management
+  getSessions(): Promise<Session[]>
+  getSessionMessages(sessionId: string): Promise<Session | null>
+  createSession(workspaceId: string, options?: CreateSessionOptions): Promise<Session>
+  deleteSession(sessionId: string): Promise<void>
+  sendMessage(sessionId: string, message: string, attachments?: FileAttachment[], storedAttachments?: StoredAttachmentType[], options?: SendMessageOptions): Promise<void>
+  cancelProcessing(sessionId: string, silent?: boolean): Promise<void>
+  killShell(sessionId: string, shellId: string): Promise<{ success: boolean; error?: string }>
+  getTaskOutput(taskId: string): Promise<string | null>
+  respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean): Promise<boolean>
+  respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
+
+  // Consolidated session command handler
+  sessionCommand(sessionId: string, command: SessionCommand): Promise<void | RefreshTitleResult>
+
+  // Pending plan execution (for reload recovery)
+  getPendingPlanExecution(sessionId: string): Promise<{ planPath: string; awaitingCompaction: boolean } | null>
+
+  // Workspace management
+  getWorkspaces(): Promise<Workspace[]>
+  createWorkspace(folderPath: string, name: string): Promise<Workspace>
+  checkWorkspaceSlug(slug: string): Promise<{ exists: boolean; path: string }>
+
+  // Window management
+  getWindowWorkspace(): Promise<string | null>
+  getWindowMode(): Promise<string | null>
+  openWorkspace(workspaceId: string): Promise<void>
+  openSessionInNewWindow(workspaceId: string, sessionId: string): Promise<void>
+  switchWorkspace(workspaceId: string): Promise<void>
+  closeWindow(): Promise<void>
+  confirmCloseWindow(): Promise<void>
+  /** Listen for close requests (X button, Cmd+W). Returns cleanup function. */
+  onCloseRequested(callback: () => void): () => void
+  /** Show/hide macOS traffic light buttons (for fullscreen overlays) */
+  setTrafficLightsVisible(visible: boolean): Promise<void>
+
+  // Event listeners
+  onSessionEvent(callback: (event: SessionEvent) => void): () => void
+  /** Called when main process finishes loading sessions from disk. Returns cleanup function. */
+  onSessionsInitialized(callback: () => void): () => void
+
+  // File operations
+  readFile(path: string): Promise<string>
+  /** Read a file as binary data (Uint8Array) */
+  readFileBinary(path: string): Promise<Uint8Array>
+  /** Read a file as a data URL (data:{mime};base64,...) for binary preview (images, PDFs) */
+  readFileDataUrl(path: string): Promise<string>
+  openFileDialog(): Promise<string[]>
+  openAndReadFileAttachments(): Promise<FileAttachment[]>
+  readFileAttachment(path: string): Promise<FileAttachment | null>
+  storeAttachment(sessionId: string, attachment: FileAttachment): Promise<import('../../../../packages/core/src/types/index.ts').StoredAttachment>
+  generateThumbnail(base64: string, mimeType: string): Promise<string | null>
+
+  // Filesystem search (for @ mention file selection)
+  searchFiles(basePath: string, query: string): Promise<FileSearchResult[]>
+  // Filesystem mutations (for Explorer context menu)
+  fsCreateDir(dirPath: string): Promise<void>
+  fsRename(oldPath: string, newPath: string): Promise<void>
+  fsDelete(filePath: string, recursive?: boolean): Promise<void>
+  // Debug: send renderer logs to main process log file
+  debugLog(...args: unknown[]): void
+
+  // Theme
+  getSystemTheme(): Promise<boolean>
+  onSystemThemeChange(callback: (isDark: boolean) => void): () => void
+
+  // System
+  getVersions(): { node: string; chrome: string; electron: string }
+  getHomeDir(): Promise<string>
+  isDebugMode(): Promise<boolean>
+
+  // Auto-update
+  checkForUpdates(): Promise<UpdateInfo>
+  getUpdateInfo(): Promise<UpdateInfo>
+  installUpdate(): Promise<void>
+  dismissUpdate(version: string): Promise<void>
+  getDismissedUpdateVersion(): Promise<string | null>
+  onUpdateAvailable(callback: (info: UpdateInfo) => void): () => void
+  onUpdateDownloadProgress(callback: (progress: number) => void): () => void
+
+  // Shell operations
+  openUrl(url: string): Promise<void>
+  openFile(path: string): Promise<void>
+  showInFolder(path: string): Promise<void>
+  revealInExplorer(path: string): Promise<void>
+
+  // Menu event listeners
+  onMenuNewChat(callback: () => void): () => void
+  onMenuOpenSettings(callback: () => void): () => void
+  onMenuKeyboardShortcuts(callback: () => void): () => void
+  onMenuToggleFocusMode(callback: () => void): () => void
+  onMenuToggleSidebar(callback: () => void): () => void
+
+  // Deep link navigation listener (for external opentomo:// URLs)
+  onDeepLinkNavigate(callback: (nav: DeepLinkNavigation) => void): () => void
+
+  // Auth
+  showLogoutConfirmation(): Promise<boolean>
+  showDeleteSessionConfirmation(name: string): Promise<boolean>
+  logout(): Promise<void>
+
+  // Onboarding
+  getAuthState(): Promise<AuthState>
+  getSetupNeeds(): Promise<SetupNeeds>
+  saveOnboardingConfig(config: {
+    authType?: AuthType  // Optional - if not provided, preserves existing auth type (for add workspace)
+    workspace?: { name: string; iconUrl?: string }  // Optional - if not provided, only updates billing
+    credential?: string  // API key or OAuth token based on authType
+    anthropicBaseUrl?: string | null  // Custom Anthropic API base URL
+    customModel?: string | null  // Custom model ID override
+  }): Promise<OnboardingSaveResult>
+  // Claude OAuth (two-step flow)
+  startClaudeOAuth(): Promise<{ success: boolean; authUrl?: string; error?: string }>
+  exchangeClaudeCode(code: string): Promise<ClaudeOAuthResult>
+  hasClaudeOAuthState(): Promise<boolean>
+  clearClaudeOAuthState(): Promise<{ success: boolean }>
+
+  // Settings - API Setup
+  getApiSetup(): Promise<ApiSetupInfo>
+  updateApiSetup(authType: AuthType, credential?: string, anthropicBaseUrl?: string | null, customModel?: string | null): Promise<void>
+  testApiConnection(apiKey: string, baseUrl?: string, modelName?: string): Promise<{ success: boolean; error?: string; modelCount?: number }>
+  getClaudeOAuthStatus(): Promise<ClaudeOAuthStatus>
+  activateClaudeOAuth(): Promise<{ success: boolean; error?: string }>
+  disconnectClaudeOAuth(): Promise<{ success: boolean; error?: string }>
+
+  // Settings - Model (global default)
+  getModel(): Promise<string | null>
+  setModel(model: string): Promise<void>
+  // Settings - Default Chat Mode
+  getDefaultChatMode(): Promise<'safe' | 'ask' | 'allow-all'>
+  setDefaultChatMode(mode: 'safe' | 'ask' | 'allow-all'): Promise<void>
+  // Session-specific model (overrides global)
+  getSessionModel(sessionId: string, workspaceId: string): Promise<string | null>
+  setSessionModel(sessionId: string, workspaceId: string, model: string | null): Promise<void>
+
+  // Settings - Provider (global default)
+  getProvider(): Promise<string | null>
+  setProvider(provider: string): Promise<void>
+
+  // Provider Connections (multi-connection management)
+  listConnections(): Promise<ProviderConnection[]>
+  addConnection(connectionData: {
+    name: string
+    type: string
+    endpoint: string
+    models: { best?: string; balanced?: string; fast?: string }
+  }, apiKey: string): Promise<ProviderConnection>
+  updateConnection(connectionId: string, data: {
+    name?: string
+    endpoint?: string
+    models?: { best?: string; balanced?: string; fast?: string }
+  }, apiKey?: string): Promise<ProviderConnection>
+  deleteConnection(connectionId: string): Promise<boolean>
+  getActiveConnectionId(): Promise<string | null>
+  setActiveConnection(connectionId: string | null): Promise<void>
+  testConnectionById(connectionId: string): Promise<{ success: boolean; error?: string }>
+  getConnectionApiKey(connectionId: string): Promise<string | null>
+
+  // Workspace Settings (per-workspace configuration)
+  getWorkspaceSettings(workspaceId: string): Promise<WorkspaceSettings | null>
+  updateWorkspaceSetting<K extends keyof WorkspaceSettings>(workspaceId: string, key: K, value: WorkspaceSettings[K]): Promise<void>
+
+  // Workspace environment variables (.env file)
+  getWorkspaceEnv(workspaceId: string): Promise<EnvVar[]>
+  saveWorkspaceEnv(workspaceId: string, vars: EnvVar[]): Promise<void>
+
+  // Folder dialog
+  openFolderDialog(): Promise<string | null>
+
+  // User Preferences (diff viewer settings)
+  readPreferences(): Promise<{ content: string; exists: boolean; path: string }>
+  writePreferences(content: string): Promise<{ success: boolean; error?: string }>
+
+  // USER.md
+  readUserMd(): Promise<{ content: string; exists: boolean; path: string }>
+  writeUserMd(content: string): Promise<{ success: boolean; error?: string }>
+
+  // Session Drafts (persisted input text)
+  getDraft(sessionId: string): Promise<string | null>
+  setDraft(sessionId: string, text: string): Promise<void>
+  deleteDraft(sessionId: string): Promise<void>
+  getAllDrafts(): Promise<Record<string, string>>
+
+  // Session Info Panel
+  getSessionFiles(sessionId: string, includeHidden?: boolean): Promise<SessionFile[]>
+  getSessionNotes(sessionId: string): Promise<string>
+  setSessionNotes(sessionId: string, content: string): Promise<void>
+  watchSessionFiles(sessionId: string): Promise<void>
+  unwatchSessionFiles(): Promise<void>
+  onSessionFilesChanged(callback: (sessionId: string) => void): () => void
+
+  // Directory file explorer (for working directory)
+  getDirectoryFiles(dirPath: string, includeHidden?: boolean): Promise<SessionFile[]>
+  watchDirectoryFiles(dirPath: string): Promise<void>
+  unwatchDirectoryFiles(): Promise<void>
+  onDirectoryFilesChanged(callback: (dirPath: string) => void): () => void
+
+  // Permissions config
+  getWorkspacePermissionsConfig(workspaceId: string): Promise<import('@opentomo/shared/agent').PermissionsConfigFile | null>
+  getDefaultPermissionsConfig(): Promise<{ config: import('@opentomo/shared/agent').PermissionsConfigFile | null; path: string }>
+
+  // Session content search (full-text search via ripgrep)
+  searchSessionContent(workspaceId: string, query: string, searchId?: string): Promise<SessionSearchResult[]>
+
+  // Default permissions change listener (live updates when default.json changes)
+  onDefaultPermissionsChanged(callback: () => void): () => void
+
+  // Skills
+  getSkills(workspaceId: string, workingDirectory?: string): Promise<LoadedSkill[]>
+  getSkillFiles?(workspaceId: string, skillSlug: string): Promise<SkillFile[]>
+  deleteSkill(workspaceId: string, skillSlug: string): Promise<void>
+  openSkillInEditor(workspaceId: string, skillSlug: string): Promise<void>
+  openSkillInFinder(workspaceId: string, skillSlug: string): Promise<void>
+
+  // Skills change listener (live updates when skills are added/removed/modified)
+  onSkillsChanged(callback: (skills: LoadedSkill[]) => void): () => void
+
+  // Skills catalog — returns all skills with disabled state
+  getSkillsCatalog(workspaceId: string): Promise<{ skills: LoadedSkill[]; disabledSlugs: string[] }>
+  toggleSkillEnabled(workspaceId: string, skillSlug: string, enabled: boolean): Promise<void>
+  openSkillsDir(workspaceId: string): Promise<void>
+  pickSkillImportFolder(): Promise<{ folderPath: string } | null>
+
+  // Disabled skills change listener (fires when a skill is enabled/disabled)
+  onDisabledSkillsChanged?(callback: (disabledSlugs: string[]) => void): () => void
+
+  // Commands
+  getCommands(workspaceId: string): Promise<LoadedCommand[]>
+  saveCommand(workspaceId: string, slug: string, name: string, description: string, content: string): Promise<LoadedCommand>
+  deleteCommand(workspaceId: string, commandSlug: string): Promise<void>
+  openCommandInEditor(workspaceId: string, commandSlug: string): Promise<void>
+  openCommandInFinder(workspaceId: string, commandSlug: string): Promise<void>
+
+  // Commands change listener (live updates when commands are added/removed/modified)
+  onCommandsChanged(callback: (commands: LoadedCommand[]) => void): () => void
+
+  // Projects (workspace-scoped)
+  listProjects(workspaceId: string): Promise<import('@opentomo/shared/projects').ProjectConfig[]>
+  createProject(workspaceId: string, input: import('@opentomo/shared/projects').CreateProjectInput): Promise<import('@opentomo/shared/projects').ProjectConfig>
+  updateProject(workspaceId: string, projectId: string, input: import('@opentomo/shared/projects').UpdateProjectInput): Promise<void>
+  deleteProject(workspaceId: string, projectId: string): Promise<{ stripped: number }>
+  reorderProjects(workspaceId: string, orderedIds: string[]): Promise<void>
+  // Projects change listener (live updates when projects config changes)
+  onProjectsChanged(callback: (workspaceId: string) => void): () => void
+  // Smart Clean: AI-powered batch categorization of uncategorized sessions
+  smartCategorize(workspaceId: string): Promise<{ categorized: number; newProjectsCreated: number }>
+
+  // Views (workspace-scoped, stored in views.json)
+  listViews(workspaceId: string): Promise<import('@opentomo/shared/views').ViewConfig[]>
+  saveViews(workspaceId: string, views: import('@opentomo/shared/views').ViewConfig[]): Promise<void>
+
+  // Generic workspace image loading/saving (returns data URL for images, raw string for SVG)
+  readWorkspaceImage(workspaceId: string, relativePath: string): Promise<string>
+  writeWorkspaceImage(workspaceId: string, relativePath: string, base64: string, mimeType: string): Promise<void>
+
+  // Tool icon mappings (for Appearance settings page)
+  getToolIconMappings(): Promise<ToolIconMapping[]>
+
+  // Theme (app-level default)
+  getAppTheme(): Promise<import('@config/theme').ThemeOverrides | null>
+  saveAppTheme(colors: import('@config/theme').ThemeOverrides): Promise<void>
+  createPresetTheme(name: string, colors: import('@config/theme').ThemeOverrides): Promise<string>
+  // Preset themes (app-level)
+  loadPresetThemes(): Promise<import('@config/theme').PresetTheme[]>
+  loadPresetTheme(themeId: string): Promise<import('@config/theme').PresetTheme | null>
+  getColorTheme(): Promise<string>
+  setColorTheme(themeId: string): Promise<void>
+  // Workspace-level theme overrides
+  getWorkspaceColorTheme(workspaceId: string): Promise<string | null>
+  setWorkspaceColorTheme(workspaceId: string, themeId: string | null): Promise<void>
+  getAllWorkspaceThemes(): Promise<Record<string, string | undefined>>
+
+  // Theme change listeners (live updates when theme.json files change)
+  onAppThemeChange(callback: (theme: import('@config/theme').ThemeOverrides | null) => void): () => void
+
+  // Logo URL resolution (uses Node.js filesystem cache for provider domains)
+  getLogoUrl(serviceUrl: string, provider?: string): Promise<string | null>
+
+  // Notifications
+  showNotification(title: string, body: string, workspaceId: string, sessionId: string): Promise<void>
+  getNotificationsEnabled(): Promise<boolean>
+  setNotificationsEnabled(enabled: boolean): Promise<void>
+
+  // Input settings
+  getAutoCapitalisation(): Promise<boolean>
+  setAutoCapitalisation(enabled: boolean): Promise<void>
+  getSendMessageKey(): Promise<'enter' | 'cmd-enter'>
+  setSendMessageKey(key: 'enter' | 'cmd-enter'): Promise<void>
+  getSpellCheck(): Promise<boolean>
+  setSpellCheck(enabled: boolean): Promise<void>
+
+  updateBadgeCount(count: number): Promise<void>
+  clearBadgeCount(): Promise<void>
+  setDockIconWithBadge(dataUrl: string): Promise<void>
+  onBadgeDraw(callback: (data: { count: number; iconDataUrl: string }) => void): () => void
+  getWindowFocusState(): Promise<boolean>
+  onWindowFocusChange(callback: (isFocused: boolean) => void): () => void
+  onNotificationNavigate(callback: (data: { workspaceId: string; sessionId: string }) => void): () => void
+
+  // Theme preferences sync across windows (mode, colorTheme, font)
+  broadcastThemePreferences(preferences: { mode: string; colorTheme: string; font: string }): Promise<void>
+  onThemePreferencesChange(callback: (preferences: { mode: string; colorTheme: string; font: string }) => void): () => void
+
+  // Workspace theme sync across windows
+  broadcastWorkspaceThemeChange(workspaceId: string, themeId: string | null): Promise<void>
+  onWorkspaceThemeChange(callback: (data: { workspaceId: string; themeId: string | null }) => void): () => void
+
+  // Git operations
+  getGitBranch(dirPath: string): Promise<string | null>
+
+  // Cost Tracking
+  getCostStats(workspaceId?: string): Promise<CostStats>
+
+  // Git Bash (Windows)
+  checkGitBash(): Promise<GitBashStatus>
+  browseForGitBash(): Promise<string | null>
+  setGitBashPath(path: string): Promise<{ success: boolean; error?: string }>
+
+  // Prerequisites checking (all platforms)
+  checkPrerequisites(): Promise<PrerequisitesCheckResult>
+
+  // Menu actions (from renderer to main)
+  menuQuit(): Promise<void>
+  menuNewWindow(): Promise<void>
+  menuMinimize(): Promise<void>
+  menuMaximize(): Promise<void>
+  menuZoomIn(): Promise<void>
+  menuZoomOut(): Promise<void>
+  menuZoomReset(): Promise<void>
+  menuToggleDevTools(): Promise<void>
+  menuUndo(): Promise<void>
+  menuRedo(): Promise<void>
+  menuCut(): Promise<void>
+  menuCopy(): Promise<void>
+  menuPaste(): Promise<void>
+  menuSelectAll(): Promise<void>
+
+  // Terminal (PTY)
+  /** Create a new PTY process at cwd, returns ptyId */
+  terminalCreate(cwd: string, cols: number, rows: number): Promise<string>
+  /** Write data (keystrokes) to the PTY — fire-and-forget */
+  terminalWrite(ptyId: string, data: string): void
+  /** Resize the PTY to new dimensions */
+  terminalResize(ptyId: string, cols: number, rows: number): Promise<void>
+  /** Kill the PTY process */
+  terminalKill(ptyId: string): Promise<void>
+  /** Subscribe to PTY output data. Returns cleanup fn. */
+  onTerminalData(callback: (ptyId: string, data: string) => void): () => void
+  /** Subscribe to PTY exit events. Returns cleanup fn. */
+  onTerminalExit(callback: (ptyId: string, exitCode: number) => void): () => void
+}
+
+/**
+ * Result from Claude OAuth (setup-token) flow
+ */
+export interface ClaudeOAuthResult {
+  success: boolean
+  token?: string
+  error?: string
+}
+
+/**
+ * Claude Subscription (oauth_token) connection status for settings
+ */
+export interface ClaudeOAuthStatus {
+  isConnected: boolean   // valid OAuth credentials are stored
+  isActive: boolean      // authType === 'oauth_token' is the current active setting
+  expiresAt?: number     // token expiry timestamp (ms) from stored credentials
+}
+
+/**
+ * Current API setup info for settings
+ */
+export interface ApiSetupInfo {
+  authType: AuthType
+  hasCredential: boolean
+  apiKey?: string  // The stored API key (only returned for api_key auth type)
+  anthropicBaseUrl?: string  // Custom Anthropic API base URL (for third-party compatible APIs)
+  customModel?: string  // Custom model ID override (for third-party APIs)
+  /** Cached tier models fetched from Anthropic API on Claude Subscription activation */
+  oauthTierModels?: { best?: string; balanced?: string; fast?: string }
+}
+
+/**
+ * Auto-update information
+ */
+export interface UpdateInfo {
+  /** Whether an update is available */
+  available: boolean
+  /** Current installed version */
+  currentVersion: string
+  /** Latest available version (null if check failed) */
+  latestVersion: string | null
+  /** Download state */
+  downloadState: 'idle' | 'downloading' | 'ready' | 'installing' | 'error'
+  /** Download progress (0-100) */
+  downloadProgress: number
+  /** Error message if download/install failed */
+  error?: string
+}
+
+/**
+ * Per-session cost statistics (for Cost settings page)
+ */
+export interface CostSessionStats {
+  sessionId: string
+  sessionName?: string
+  workspaceId: string
+  workspaceName: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
+  costUsd: number
+  lastMessageAt?: number
+}
+
+/**
+ * Aggregated cost statistics across sessions
+ */
+export interface CostStats {
+  sessions: CostSessionStats[]
+  totals: {
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    cacheCreationTokens: number
+    costUsd: number
+  }
+}
+
+/**
+ * A single environment variable (key-value pair) stored in the workspace .env file.
+ */
+export interface EnvVar {
+  key: string
+  value: string
+}
+
+/**
+ * Per-workspace settings
+ */
+export interface WorkspaceSettings {
+  name?: string
+  model?: string
+  permissionMode?: PermissionMode
+  /** Permission modes available for SHIFT+TAB cycling (min 2 modes) */
+  cyclablePermissionModes?: PermissionMode[]
+  /** Default thinking level for new sessions ('off', 'think', 'max'). Defaults to 'think'. */
+  thinkingLevel?: ThinkingLevel
+  workingDirectory?: string
+}
+
+/**
+ * Navigation payload for deep links (main → renderer)
+ */
+export interface DeepLinkNavigation {
+  /** Compound route format (e.g., 'allChats/chat/abc123', 'settings/shortcuts') */
+  view?: string
+  /** Tab type */
+  tabType?: string
+  tabParams?: Record<string, string>
+  action?: string
+  actionParams?: Record<string, string>
+}
+
+// ============================================
+// Unified Navigation State Types
+// ============================================
+
+/**
+ * Right sidebar panel types
+ * Defines the content displayed in the right sidebar
+ */
+export type RightSidebarPanel =
+  | { type: 'sessionMetadata' }
+  | { type: 'files'; path?: string }
+  | { type: 'history' }
+  | { type: 'none' }
+
+/**
+ * Chat filter options - determines which sessions to show
+ * - 'allChats': All sessions regardless of status
+ * - 'label': Sessions with specific label (includes descendants via tree hierarchy)
+ */
+export type ChatFilter =
+  | { kind: 'allChats' }
+  | { kind: 'view'; viewId: string }
+
+/**
+ * Settings subpage options
+ */
+export type SettingsSubpage = 'app' | 'appearance' | 'input' | 'workspace' | 'permissions' | 'shortcuts' | 'skills' | 'providers'
+
+/**
+ * Chats navigation state - shows SessionList in navigator
+ */
+export interface ChatsNavigationState {
+  navigator: 'chats'
+  filter: ChatFilter
+  /** Selected chat details, or null for empty state */
+  details: { type: 'chat'; sessionId: string } | null
+  /** Optional right sidebar panel state */
+  rightSidebar?: RightSidebarPanel
+}
+
+
+/**
+ * Settings navigation state - shows SettingsNavigator in navigator
+ * Settings subpages are the details themselves (no separate selection)
+ */
+export interface SettingsNavigationState {
+  navigator: 'settings'
+  subpage: SettingsSubpage
+  /** Optional right sidebar panel state */
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
+ * Skills navigation state - shows SkillsListPanel in navigator
+ */
+export interface SkillsNavigationState {
+  navigator: 'skills'
+  /** Selected skill details or null for empty state */
+  details: { type: 'skill'; skillSlug: string } | null
+  /** Optional right sidebar panel state */
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
+ * Unified navigation state - single source of truth for all 3 panels
+ *
+ * From this state we can derive:
+ * - LeftSidebar: which item is highlighted (from navigator + filter/subpage)
+ * - NavigatorPanel: which list/content to show (from navigator)
+ * - MainContentPanel: what details to display (from details or subpage)
+ */
+export type NavigationState =
+  | ChatsNavigationState
+  | SettingsNavigationState
+  | SkillsNavigationState
+
+/**
+ * Type guard to check if state is chats navigation
+ */
+export const isChatsNavigation = (
+  state: NavigationState
+): state is ChatsNavigationState => state.navigator === 'chats'
+
+/**
+ * Type guard to check if state is settings navigation
+ */
+export const isSettingsNavigation = (
+  state: NavigationState
+): state is SettingsNavigationState => state.navigator === 'settings'
+
+/**
+ * Type guard to check if state is skills navigation
+ */
+export const isSkillsNavigation = (
+  state: NavigationState
+): state is SkillsNavigationState => state.navigator === 'skills'
+
+/**
+ * Default navigation state - allChats with no selection
+ */
+export const DEFAULT_NAVIGATION_STATE: NavigationState = {
+  navigator: 'chats',
+  filter: { kind: 'allChats' },
+  details: null,
+}
+
+/**
+ * Get a persistence key for localStorage from NavigationState
+ */
+export const getNavigationStateKey = (state: NavigationState): string => {
+  if (state.navigator === 'skills') {
+    if (state.details?.type === 'skill') {
+      return `skills/skill/${state.details.skillSlug}`
+    }
+    return 'skills'
+  }
+  if (state.navigator === 'settings') {
+    return `settings:${state.subpage}`
+  }
+  // Chats
+  const f = state.filter
+  let base: string
+  if (f.kind === 'view') base = `view:${f.viewId}`
+  else base = f.kind
+  if (state.details) {
+    return `${base}/chat/${state.details.sessionId}`
+  }
+  return base
+}
+
+/**
+ * Parse a persistence key back to NavigationState
+ * Returns null if the key is invalid
+ */
+export const parseNavigationStateKey = (key: string): NavigationState | null => {
+  // Handle skills
+  if (key === 'skills') return { navigator: 'skills', details: null }
+  if (key.startsWith('skills/skill/')) {
+    const skillSlug = key.slice(13)
+    if (skillSlug) {
+      return { navigator: 'skills', details: { type: 'skill', skillSlug } }
+    }
+    return { navigator: 'skills', details: null }
+  }
+
+  // Handle settings
+  if (key === 'settings') return { navigator: 'settings', subpage: 'app' }
+  if (key.startsWith('settings:')) {
+    const subpage = key.slice(9) as SettingsSubpage
+    if (['app', 'appearance', 'input', 'workspace', 'permissions', 'shortcuts', 'skills', 'providers'].includes(subpage)) {
+      return { navigator: 'settings', subpage }
+    }
+  }
+
+  // Handle chats - parse filter and optional session
+  const parseChatsKey = (filterKey: string, sessionId?: string): NavigationState | null => {
+    let filter: ChatFilter
+    if (filterKey === 'allChats') filter = { kind: 'allChats' }
+    else if (filterKey === 'flagged') filter = { kind: 'allChats' } // flagged removed, fallback to allChats
+    else if (filterKey.startsWith('view:')) {
+      const viewId = filterKey.slice(5)
+      if (!viewId) return null
+      filter = { kind: 'view', viewId }
+    } else {
+      return null
+    }
+    return {
+      navigator: 'chats',
+      filter,
+      details: sessionId ? { type: 'chat', sessionId } : null,
+    }
+  }
+
+  // Check for chat details
+  if (key.includes('/chat/')) {
+    const [filterPart, , sessionId] = key.split('/')
+    return parseChatsKey(filterPart, sessionId)
+  }
+
+  // Simple filter key
+  return parseChatsKey(key)
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI
+    /** Widget drill-down: send a message to the active agent session */
+    __widgetSendMessage?: (message: string) => void
+    /** Widget link handler: open a URL in the system browser */
+    __widgetOpenUrl?: (url: string) => void
+  }
+}

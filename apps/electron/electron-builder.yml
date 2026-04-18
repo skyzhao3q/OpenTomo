@@ -1,0 +1,214 @@
+appId: com.opentomo.app
+productName: opentomo
+copyright: Copyright © 2025 OpenTomo Contributors
+
+electronVersion: "39.5.2"
+npmRebuild: false  # Skip native module rebuild - modules already built in monorepo root
+
+# Hook to compile macOS 26+ Liquid Glass icon after packaging
+afterPack: scripts/afterPack.cjs
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - "!dist/renderer/src/**"
+  - "!**/*.map"
+  - package.json
+  # Bundled assets loaded at runtime via getBundledAssetsDir()
+  - dist/assets/docs/**/*
+  - dist/assets/tool-icons/**/*
+  - dist/assets/themes/**/*
+  - dist/assets/permissions/**/*
+  - dist/assets/config-defaults.json
+  # Include network interceptor for API error capture and MCP schema injection
+  - ../../packages/shared/src/network-interceptor.ts
+  # Include bundled Bun runtime (platform-specific, set by build script)
+  - vendor/bun/**/*
+  # Include bundled Node.js LTS runtime (platform-specific, set by build script)
+  - vendor/node/**/*
+  # Exclude everything from node_modules (will use extraResources for SDK)
+  - "!../../node_modules/**/*"
+
+# Include SDK as extraResources to bypass node_modules auto-exclusion
+# Since electron-builder v20.15.2, directories named "node_modules" are automatically excluded
+# Using extraResources with explicit from/to paths works around this limitation
+# See: https://github.com/electron-userland/electron-builder/issues/3104
+extraResources:
+  - from: ../../node_modules/@anthropic-ai/claude-agent-sdk
+    to: app/node_modules/@anthropic-ai/claude-agent-sdk
+    filter:
+      - "**/*"
+  # AI SDK packages - staged from Bun cache by electron-stage-sdk-deps.ts
+  - from: .sdk-deps/ai
+    to: app/node_modules/ai
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@ai-sdk/google
+    to: app/node_modules/@ai-sdk/google
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@ai-sdk/gateway
+    to: app/node_modules/@ai-sdk/gateway
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@ai-sdk/provider
+    to: app/node_modules/@ai-sdk/provider
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@ai-sdk/provider-utils
+    to: app/node_modules/@ai-sdk/provider-utils
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@opentelemetry/api
+    to: app/node_modules/@opentelemetry/api
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@vercel/oidc
+    to: app/node_modules/@vercel/oidc
+    filter:
+      - "**/*"
+  - from: .sdk-deps/@standard-schema/spec
+    to: app/node_modules/@standard-schema/spec
+    filter:
+      - "**/*"
+  - from: .sdk-deps/eventsource-parser
+    to: app/node_modules/eventsource-parser
+    filter:
+      - "**/*"
+  - from: .sdk-deps/json-schema
+    to: app/node_modules/json-schema
+    filter:
+      - "**/*"
+  - from: .sdk-deps/zod
+    to: app/node_modules/zod
+    filter:
+      - "**/*"
+
+extraMetadata:
+  main: dist/main.cjs
+
+# Auto-update: electron-updater fetches from GitHub Releases
+publish:
+  provider: github
+  owner: OpenTomo
+  repo: opentomo-app-release
+  releaseType: release
+
+asar: false
+# asarUnpack is disabled: asar:true causes opentomo.app to become inaccessible at signing
+# time in electron-builder 26.7.0 (app appears as broken symlink to @electron/osx-sign).
+# Original asarUnpack entries (restore when asar:true is re-enabled):
+#   asarUnpack:
+#     - "node_modules/better-sqlite3/**"
+#     - "vendor/bun/**"
+#     - "vendor/node/**"
+#     - "packages/shared/src/network-interceptor.ts"
+
+mac:
+  category: public.app-category.productivity
+  icon: resources/icon.icns
+  # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
+  # The value must match --app-icon used in actool (see afterPack.js)
+  extendInfo:
+    CFBundleIconName: AppIcon
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  # Exclude binaries for other platforms
+  files:
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/arm64-linux"
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-linux"
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-win32"
+    # Exclude Windows-only Node.js binary on macOS
+    - "!vendor/node/node.exe"
+  # Use predictable naming for macOS packages (applies to zip; dmg uses its own config below)
+  artifactName: "opentomo-${arch}.${ext}"
+  # Code signing & notarization (handled by env vars: APPLE_API_KEY, etc.)
+  notarize: true
+
+dmg:
+  # Use predictable naming: opentomo-arm64.dmg, opentomo-x64.dmg
+  artifactName: "opentomo-${arch}.dmg"
+  # Custom background (multi-resolution TIFF with 1x+2x for retina support)
+  background: resources/dmg-background.tiff
+  # Use app icon as the mounted volume icon in Finder
+  icon: resources/icon.icns
+  iconSize: 80
+  title: "opentomo"
+  contents:
+    - x: 130
+      y: 200
+    - x: 410
+      y: 200
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+win:
+  icon: resources/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # Use predictable naming: opentomo-x64.exe
+  artifactName: "opentomo-${arch}.${ext}"
+  files:
+    # Exclude ripgrep binaries for other platforms
+    - "!node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/arm64-linux"
+    - "!node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-linux"
+    - "!node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/arm64-darwin"
+    - "!node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-darwin"
+    # Exclude macOS/Linux-only Node.js binary on Windows (node.exe goes via extraResources)
+    - "!vendor/node/node"
+    # WORKAROUND: Exclude bun from regular files on Windows.
+    # electron-builder's npm node module collector causes EBUSY errors when copying
+    # executables because it scans/locks files while simultaneously trying to copy them.
+    # Moving them to extraResources avoids this by copying before the collector runs.
+    # See: https://github.com/electron-userland/electron-builder/issues/8250
+    - "!vendor/bun/**/*"
+  # Copy vendor binaries as extraResources to avoid EBUSY file locking (see comment above)
+  extraResources:
+    - from: vendor/bun/bun.exe
+      to: vendor/bun/bun.exe
+    - from: vendor/node/node.exe
+      to: vendor/node/node.exe
+
+nsis:
+  oneClick: true
+  # Per-user install to %LOCALAPPDATA%\Programs\ (not Program Files).
+  # Bun subprocess cannot read/write files in Program Files due to Windows permissions.
+  perMachine: false
+  deleteAppDataOnUninstall: true
+
+linux:
+  icon: resources/icon.png
+  category: Utility
+  maintainer: "OpenTomo Contributors"
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  artifactName: "opentomo-${arch}.${ext}"
+  # Exclude ripgrep binaries for other platforms
+  files:
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/arm64-darwin"
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-darwin"
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/x64-win32"
+    - "!../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep/arm64-linux"
+    # Exclude Windows-only Node.js binary on Linux
+    - "!vendor/node/node.exe"

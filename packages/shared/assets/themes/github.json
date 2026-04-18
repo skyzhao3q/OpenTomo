@@ -1,0 +1,26 @@
+{
+  "name": "GitHub",
+  "description": "Clean and familiar, inspired by GitHub's Primer design system",
+  "shikiTheme": {
+    "light": "github-light-default",
+    "dark": "github-dark-default"
+  },
+  "background": "oklch(1.000 0 0)",
+  "foreground": "oklch(0.254 0.011 254.0)",
+  "accent": "oklch(0.540 0.191 257.5)",
+  "destructive": "oklch(0.552 0.205 24.5)",
+  "paper": "oklch(1.000 0 0)",
+  "navigator": "oklch(0.978 0.003 247.9)",
+  "popover": "oklch(1.000 0 0)",
+  "popoverSolid": "oklch(1.000 0 0)",
+  "dark": {
+    "background": "oklch(0.176 0.014 258.4)",
+    "foreground": "oklch(0.943 0.011 243.7)",
+    "accent": "oklch(0.569 0.202 259.7)",
+    "destructive": "oklch(0.665 0.205 27.0)",
+    "paper": "oklch(0.220 0.016 256.8)",
+    "navigator": "oklch(0.104 0.019 248.3)",
+    "popover": "oklch(0.220 0.016 256.8)",
+    "popoverSolid": "oklch(0.220 0.016 256.8)"
+  }
+}

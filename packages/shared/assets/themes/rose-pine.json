@@ -1,0 +1,26 @@
+{
+  "name": "Rosé Pine",
+  "description": "All natural pine, faux fur and a bit of soho vibes",
+  "shikiTheme": {
+    "light": "rose-pine-dawn",
+    "dark": "rose-pine"
+  },
+  "background": "oklch(0.970 0.011 71.9)",
+  "foreground": "oklch(0.460 0.063 289.6)",
+  "accent": "oklch(0.696 0.106 23.0)",
+  "destructive": "oklch(0.599 0.107 2.7)",
+  "paper": "oklch(0.987 0.011 76.6)",
+  "navigator": "oklch(0.970 0.011 71.9)",
+  "popover": "oklch(0.987 0.011 76.6)",
+  "popoverSolid": "oklch(0.987 0.011 76.6)",
+  "dark": {
+    "background": "oklch(0.213 0.025 291.1)",
+    "foreground": "oklch(0.909 0.030 290.0)",
+    "accent": "oklch(0.836 0.054 21.1)",
+    "destructive": "oklch(0.698 0.156 4.2)",
+    "paper": "oklch(0.271 0.042 289.2)",
+    "navigator": "oklch(0.213 0.025 291.1)",
+    "popover": "oklch(0.271 0.042 289.2)",
+    "popoverSolid": "oklch(0.271 0.042 289.2)"
+  }
+}

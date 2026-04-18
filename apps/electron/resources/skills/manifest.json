@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "skills": {
+    "docx": {
+      "version": "1.0.0",
+      "runtime": "python",
+      "category": "MS Office"
+    },
+    "pdf": {
+      "version": "1.0.0",
+      "runtime": "python",
+      "category": "PDF"
+    },
+    "pptx": {
+      "version": "1.0.0",
+      "runtime": "python",
+      "category": "MS Office"
+    },
+    "skill-creator": {
+      "version": "1.0.0",
+      "runtime": "python",
+      "category": "system"
+    },
+    "xlsx": {
+      "version": "1.0.0",
+      "runtime": "python",
+      "category": "MS Office"
+    }
+  }
+}

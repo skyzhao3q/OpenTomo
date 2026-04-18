@@ -1,0 +1,26 @@
+{
+  "name": "SynthWave '84",
+  "description": "Retro-futuristic neon palette with purple haze",
+  "shikiTheme": {
+    "light": "min-light",
+    "dark": "synthwave-84"
+  },
+  "background": "oklch(0.966 0.022 309.6)",
+  "foreground": "oklch(0.270 0.045 300.7)",
+  "accent": "oklch(0.560 0.183 333.8)",
+  "destructive": "oklch(0.555 0.206 18.8)",
+  "paper": "oklch(0.932 0.027 307.0)",
+  "navigator": "oklch(0.932 0.027 307.0)",
+  "popover": "oklch(0.932 0.027 307.0)",
+  "popoverSolid": "oklch(0.932 0.027 307.0)",
+  "dark": {
+    "background": "oklch(0.268 0.033 291.6)",
+    "foreground": "oklch(0.792 0.000 89.9)",
+    "accent": "oklch(0.769 0.189 339.1)",
+    "destructive": "oklch(0.664 0.221 22.4)",
+    "paper": "oklch(0.270 0.045 300.7)",
+    "navigator": "oklch(0.233 0.038 292.3)",
+    "popover": "oklch(0.270 0.045 300.7)",
+    "popoverSolid": "oklch(0.270 0.045 300.7)"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Everforest",
+  "description": "Comfortable green-toned palette inspired by natural landscapes",
+  "shikiTheme": {
+    "light": "everforest-light",
+    "dark": "everforest-dark"
+  },
+  "background": "oklch(0.974 0.026 90.1)",
+  "foreground": "oklch(0.515 0.021 232.9)",
+  "accent": "oklch(0.720 0.122 125.2)",
+  "destructive": "oklch(0.671 0.200 25.2)",
+  "paper": "oklch(0.952 0.031 98.9)",
+  "navigator": "oklch(0.974 0.026 90.1)",
+  "popover": "oklch(0.952 0.031 98.9)",
+  "popoverSolid": "oklch(0.952 0.031 98.9)",
+  "dark": {
+    "background": "oklch(0.324 0.015 240.4)",
+    "foreground": "oklch(0.830 0.041 86.1)",
+    "accent": "oklch(0.773 0.091 125.8)",
+    "destructive": "oklch(0.709 0.128 19.6)",
+    "paper": "oklch(0.360 0.017 227.1)",
+    "navigator": "oklch(0.324 0.015 240.4)",
+    "popover": "oklch(0.360 0.017 227.1)",
+    "popoverSolid": "oklch(0.360 0.017 227.1)"
+  }
+}

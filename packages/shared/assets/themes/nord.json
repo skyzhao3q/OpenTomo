@@ -1,0 +1,26 @@
+{
+  "name": "Nord",
+  "description": "Arctic, north-bluish color palette from the Polar Night",
+  "shikiTheme": {
+    "light": "github-light",
+    "dark": "nord"
+  },
+  "background": "oklch(0.951 0.007 260.7)",
+  "foreground": "oklch(0.324 0.023 264.2)",
+  "accent": "oklch(0.594 0.077 254.0)",
+  "destructive": "oklch(0.606 0.121 15.3)",
+  "paper": "oklch(0.933 0.010 261.8)",
+  "navigator": "oklch(0.933 0.010 261.8)",
+  "popover": "oklch(0.933 0.010 261.8)",
+  "popoverSolid": "oklch(0.933 0.010 261.8)",
+  "dark": {
+    "background": "oklch(0.324 0.023 264.2)",
+    "foreground": "oklch(0.899 0.016 262.7)",
+    "accent": "oklch(0.775 0.062 217.5)",
+    "destructive": "oklch(0.606 0.121 15.3)",
+    "paper": "oklch(0.379 0.029 266.5)",
+    "navigator": "oklch(0.324 0.023 264.2)",
+    "popover": "oklch(0.379 0.029 266.5)",
+    "popoverSolid": "oklch(0.379 0.029 266.5)"
+  }
+}

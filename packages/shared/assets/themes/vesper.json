@@ -1,0 +1,26 @@
+{
+  "name": "Vesper",
+  "description": "Warm monochrome palette with amber highlights",
+  "shikiTheme": {
+    "light": "min-light",
+    "dark": "vesper"
+  },
+  "background": "oklch(0.980 0.005 78.3)",
+  "foreground": "oklch(0.344 0.007 48.5)",
+  "accent": "oklch(0.638 0.120 59.5)",
+  "destructive": "oklch(0.574 0.148 30.4)",
+  "paper": "oklch(0.945 0.009 78.3)",
+  "navigator": "oklch(0.945 0.009 78.3)",
+  "popover": "oklch(0.945 0.009 78.3)",
+  "popoverSolid": "oklch(0.945 0.009 78.3)",
+  "dark": {
+    "background": "oklch(0.173 0.000 89.9)",
+    "foreground": "oklch(0.779 0.000 89.9)",
+    "accent": "oklch(0.869 0.088 60.7)",
+    "destructive": "oklch(0.788 0.103 31.3)",
+    "paper": "oklch(0.226 0.000 89.9)",
+    "navigator": "oklch(0.145 0.000 89.9)",
+    "popover": "oklch(0.226 0.000 89.9)",
+    "popoverSolid": "oklch(0.226 0.000 89.9)"
+  }
+}

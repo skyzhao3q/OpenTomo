@@ -1,0 +1,87 @@
+{
+  "name": "@opentomo/shared",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Shared business logic for OpenTomo - agent, auth, config, credentials",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./agent": "./src/agent/index.ts",
+    "./agent/modes": "./src/agent/mode-types.ts",
+    "./agent/mode-types": "./src/agent/mode-types.ts",
+    "./agent/thinking-levels": "./src/agent/thinking-levels.ts",
+    "./auth": "./src/auth/index.ts",
+    "./auth/callback-page": "./src/auth/callback-page.ts",
+    "./auth/types": "./src/auth/types.ts",
+    "./config": "./src/config/index.ts",
+    "./config/connections": "./src/config/connections.ts",
+    "./docs": "./src/docs/index.ts",
+    "./docs/doc-links": "./src/docs/doc-links.ts",
+    "./config/types": "./src/config/types.ts",
+    "./credentials": "./src/credentials/index.ts",
+
+    "./prompts": "./src/prompts/index.ts",
+    "./prompts/soul": "./src/prompts/soul.ts",
+    "./prompts/user-context": "./src/prompts/user-context.ts",
+    "./prompts/frontmatter": "./src/prompts/frontmatter.ts",
+    "./sessions": "./src/sessions/index.ts",
+    "./workspaces": "./src/workspaces/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./utils/toolNames": "./src/utils/toolNames.ts",
+    "./utils/logo": "./src/utils/logo.ts",
+    "./utils/service-url": "./src/utils/service-url.ts",
+    "./utils/icon": "./src/utils/icon.ts",
+    "./icons": "./src/icons/index.ts",
+    "./colors": "./src/colors/index.ts",
+    "./utils/icon-constants": "./src/utils/icon-constants.ts",
+
+    "./projects": "./src/projects/index.ts",
+    "./projects/storage": "./src/projects/storage.ts",
+    "./projects/crud": "./src/projects/crud.ts",
+    "./views": "./src/views/index.ts",
+    "./views/storage": "./src/views/storage.ts",
+    "./version": "./src/version/index.ts",
+    "./branding": "./src/branding.ts",
+    "./network-interceptor": "./src/network-interceptor.ts",
+
+    "./search": "./src/search/index.ts",
+    "./commands": "./src/commands/index.ts",
+    "./skills": "./src/skills/index.ts",
+    "./runtimes": "./src/runtimes/index.ts",
+    "./config/storage": "./src/config/storage.ts",
+    "./workspaces/storage": "./src/workspaces/storage.ts",
+    "./utils/cli-icon-resolver": "./src/utils/cli-icon-resolver.ts",
+    "./utils/icon-encoder": "./src/utils/icon-encoder.ts",
+    "./widget": {
+      "browser": "./src/widget/index.browser.ts",
+      "default": "./src/widget/index.ts"
+    }
+  },
+  "dependencies": {
+    "@leeoniya/ufuzzy": "^1.0.19",
+    "@opentomo/core": "workspace:*",
+    "bash-parser": "^0.5.0",
+    "filtrex": "^3.1.0",
+    "glob": "^11.0.0",
+    "incr-regex-package": "^1.0.4",
+    "open": "^10.1.0",
+    "shell-quote": "^1.8.3",
+    "tar": "^7.4.3"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.19",
+    "@anthropic-ai/sdk": ">=0.70.0",
+    "zod": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@types/shell-quote": "^1.7.5",
+    "@types/tar": "^6.1.13",
+    "@types/uuid": "^11.0.0"
+  }
+}

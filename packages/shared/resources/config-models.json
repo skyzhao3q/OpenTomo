@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "description": "Available AI models for OpenTomo",
+  "models": [
+    {
+      "id": "claude-opus-4-6",
+      "name": "Opus 4.6",
+      "shortName": "Opus 4.6",
+      "description": "Most capable",
+      "contextWindow": 200000,
+      "provider": "anthropic"
+    },
+    {
+      "id": "claude-opus-4-5-20251101",
+      "name": "Opus 4.5",
+      "shortName": "Opus 4.5",
+      "description": "Previous generation",
+      "contextWindow": 200000,
+      "provider": "anthropic"
+    },
+    {
+      "id": "claude-sonnet-4-5-20250929",
+      "name": "Sonnet 4.5",
+      "shortName": "Sonnet 4.5",
+      "description": "Balanced",
+      "contextWindow": 200000,
+      "provider": "anthropic"
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "name": "Haiku 4.5",
+      "shortName": "Haiku 4.5",
+      "description": "Fast & efficient",
+      "contextWindow": 200000,
+      "provider": "anthropic"
+    },
+    {
+      "id": "anthropic/claude-opus-4.6",
+      "name": "Claude Opus 4.6",
+      "shortName": "Opus 4.6",
+      "description": "Most capable",
+      "contextWindow": 200000,
+      "provider": "opentomo"
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.6",
+      "name": "Claude Sonnet 4.6",
+      "shortName": "Sonnet 4.6",
+      "description": "Balanced",
+      "contextWindow": 200000,
+      "provider": "opentomo"
+    },
+    {
+      "id": "anthropic/claude-haiku-4.5",
+      "name": "Claude Haiku 4.5",
+      "shortName": "Haiku 4.5",
+      "description": "Fast & efficient",
+      "contextWindow": 200000,
+      "provider": "opentomo"
+    }
+  ]
+}

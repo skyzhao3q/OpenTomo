@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Widget Chart Render Test</title>
+<style>
+body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #f8fafc; color: #1e293b; }
+h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.subtitle { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+#summary { font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 6px; background: #e2e8f0; color: #475569; margin-bottom: 16px; display: inline-block; }
+#summary.all-pass { background: #dcfce7; color: #166534; }
+#summary.has-fail { background: #fee2e2; color: #991b1b; }
+.test-case { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+.test-header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.test-title { font-size: 12px; font-weight: 500; color: #334155; flex: 1; font-family: monospace; }
+.status { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.status.pending { background: #f1f5f9; color: #64748b; }
+.status.pass    { background: #dcfce7; color: #166534; }
+.status.fail    { background: #fee2e2; color: #991b1b; }
+.status.timeout { background: #fef3c7; color: #92400e; }
+.iframe-wrap { padding: 8px; background: #fff; }
+iframe { width: 100%; border: none; display: block; transition: height 0.25s ease-out; background: #fff; }
+</style>
+</head>
+<body>
+<h1>Widget Chart Render Test</h1>
+<p class="subtitle">
+  Tests the fixed <code>appendScript</code> in <code>buildReceiverSrcdoc</code>.
+  Each iframe receives a <code>widget:finalize</code> postMessage with content from
+  <code>failed-rendering/code*.html</code>. PASS = iframe reports height &gt; 50px.
+</p>
+<div id="summary">Running...</div>
+<div id="tests"></div>
+
+<script>
+// ── CSP for sandboxed iframe ──────────────────────────────────────────────────────────────────
+const CSP = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://esm.sh",
+  "style-src 'unsafe-inline'",
+  "img-src * data: blob:",
+  "font-src * data:",
+  "connect-src 'none'",
+].join('; ');
+
+// ── Receiver script ───────────────────────────────────────────────────────────────────────────
+// This is the fixed version of the receiver from buildReceiverSrcdoc (widget-sanitizer.ts).
+// Key fix: appendScript(idx+1) is called BEFORE onloadCode so inline scripts run first,
+// defining init functions before the onload callback tries to call them.
+const RECEIVER_JS = `(function(){
+var root=document.getElementById('__root');
+var _t=null,_first=true,_retryCount=0;
+function _h(){
+  if(_t)clearTimeout(_t);
+  _t=setTimeout(function(){
+    var h=document.body.scrollHeight;
+    if(h>0)parent.postMessage({type:'widget:resize',height:h,first:_first},'*');
+    _first=false;
+  },60);
+}
+new ResizeObserver(_h).observe(document.body);
+function applyHtml(html){root.innerHTML=html;_h();}
+function _verifyChart(){
+  var canvases=root.querySelectorAll('canvas');
+  if(canvases.length===0)return;
+  for(var i=0;i<canvases.length;i++){
+    var cv=canvases[i];
+    if(cv.offsetWidth===0||cv.offsetHeight===0){
+      var p=cv.parentElement;
+      if(p&&(!p.style.height||p.style.height==='0px'))p.style.height='300px';
+      _h();
+    }
+  }
+}
+function finalizeHtml(html){
+  var tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  var ss=tmp.querySelectorAll('script');
+  var scripts=[];
+  for(var i=0;i<ss.length;i++){
+    var s=ss[i];
+    var entry={src:s.getAttribute('src')||'',text:s.textContent||'',attrs:[]};
+    for(var j=0;j<s.attributes.length;j++){
+      var a=s.attributes[j];
+      if(a.name!=='src')entry.attrs.push({name:a.name,value:a.value});
+    }
+    scripts.push(entry);s.remove();
+  }
+  var visualHtml=tmp.innerHTML;
+  if(root.innerHTML!==visualHtml)root.innerHTML=visualHtml;
+  function appendScript(idx){
+    if(idx>=scripts.length){
+      [200,600,1500].forEach(function(ms){
+        setTimeout(function(){if(_retryCount<3){_retryCount++;_verifyChart();}},ms);
+      });
+      return;
+    }
+    var s=scripts[idx];
+    var n=document.createElement('script');
+    if(s.src){
+      var onloadCode=null;
+      for(var j=0;j<s.attrs.length;j++){
+        var aname=s.attrs[j].name.toLowerCase();
+        if(aname==='crossorigin')continue;
+        if(aname==='onload'){onloadCode=s.attrs[j].value;continue;}
+        n.setAttribute(s.attrs[j].name,s.attrs[j].value);
+      }
+      n.src=s.src;
+      n.onload=(function(code){return function(){
+        // Load remaining scripts FIRST: inline scripts execute synchronously,
+        // so by the time appendScript returns, init functions are already defined.
+        appendScript(idx+1);
+        if(code){
+          // Only call onload code if inline scripts have not already initialised charts.
+          var cvs=root.querySelectorAll('canvas');
+          var chartsExist=cvs.length>0&&window.Chart&&typeof Chart.getChart==='function'&&
+            Array.prototype.some.call(cvs,function(cv){return !!Chart.getChart(cv);});
+          if(chartsExist){
+            console.log('[widget-iframe] Charts already initialised, skipping onload code');
+          }else{
+            try{new Function(code)();}catch(e){console.error('[widget-iframe] onload error:',e);}
+          }
+        }
+        _h();
+      };})(onloadCode);
+      n.onerror=function(){appendScript(idx+1);};
+      root.appendChild(n);
+    }else{
+      if(s.text)n.textContent=s.text;
+      for(var j=0;j<s.attrs.length;j++){
+        if(s.attrs[j].name.toLowerCase()==='crossorigin')continue;
+        n.setAttribute(s.attrs[j].name,s.attrs[j].value);
+      }
+      root.appendChild(n);
+      appendScript(idx+1);
+    }
+  }
+  appendScript(0);_h();
+}
+window.addEventListener('message',function(e){
+  if(!e.data)return;
+  switch(e.data.type){
+    case 'widget:update':applyHtml(e.data.html);break;
+    case 'widget:finalize':finalizeHtml(e.data.html);setTimeout(_h,150);break;
+    case 'widget:theme':
+      var r=document.documentElement,v=e.data.vars;
+      if(v)for(var k in v)r.style.setProperty(k,v[k]);
+      if(typeof e.data.isDark==='boolean')r.className=e.data.isDark?'dark':'';
+      setTimeout(_h,100);break;
+  }
+});
+parent.postMessage({type:'widget:ready'},'*');
+})();`;
+
+function buildSrcdoc() {
+  return '<!DOCTYPE html><html><head>'
+    + '<meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<meta http-equiv="Content-Security-Policy" content="' + CSP + '">'
+    + '<style>*{box-sizing:border-box}body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:14px;color:#1e293b;background:#fff}</style>'
+    + '</head><body style="margin:0;padding:0;">'
+    + '<div id="__root"></div>'
+    + '<script>' + RECEIVER_JS + '<\/script>'
+    + '</body></html>';
+}
+
+// ── Widget HTML test cases ────────────────────────────────────────────────────────────────────
+// These mirror the content of failed-rendering/code*.html exactly, including the
+// backslash-escaped attribute quotes (\\") that the fixDoubleEscapedQuotes function handles.
+// Note: \\\" in JS template = \" in the string value (backslash + double-quote).
+const CASES = [
+  {
+    id: 'code1',
+    title: 'Donut chart (double-escaped quotes)',
+    html: `<div style=\\"position:relative;width:100%;height:320px;padding:16px\\"><canvas id=\\"cat\\"></canvas></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"initCat()\\"><\/script><script>function initCat(){new Chart(document.getElementById('cat'),{type:'doughnut',data:{labels:['慢性 (259)','高齢 (233)','初診 (215)','AE/副作用 (179)','MR (124)'],datasets:[{data:[259,233,215,179,124],backgroundColor:['#818CF8','#34D399','#FBBF24','#FB7185','#38BDF8'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:13}}},tooltip:{callbacks:{label:function(ctx){var total=ctx.dataset.data.reduce(function(a,b){return a+b},0);var pct=Math.round(ctx.parsed*100/total);return ctx.label+': '+pct+'%'}}}}}});}if(window.Chart)initCat();<\/script>`,
+  },
+  {
+    id: 'code2',
+    title: 'Horizontal bar — drug frequency (double-escaped quotes)',
+    html: `<div style=\\"position:relative;width:100%;height:340px;padding:16px\\"><canvas id=\\"drug\\"></canvas></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"initDrug()\\"><\/script><script>function initDrug(){new Chart(document.getElementById('drug'),{type:'bar',data:{labels:['グリメピリド','アムロジピン','ロキソプロフェン','レバミピド','ランソプラゾール','エナラプリル','アトルバスタチン','ビソプロロール','メトホルミン'],datasets:[{data:[51,51,47,43,42,40,38,34,33],backgroundColor:'rgba(129,140,248,0.8)',borderColor:'#818CF8',borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.x+'件'}}}},scales:{x:{grid:{color:'rgba(0,0,0,0.06)'},ticks:{callback:function(v){return v+'件'}}},y:{grid:{display:false}}}}});}if(window.Chart)initDrug();<\/script>`,
+  },
+  {
+    id: 'code3',
+    title: 'Horizontal bar — disease distribution (double-escaped quotes)',
+    html: `<div style=\\"position:relative;width:100%;height:340px;padding:16px\\"><canvas id=\\"dis\\"></canvas></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"initDis()\\"><\/script><script>function initDis(){new Chart(document.getElementById('dis'),{type:'bar',data:{labels:['糖尿病','高血圧','甲状腺機能低下症','不整脈','慢性腎臓病','気管支炎','認知症','狭心症','胃炎','COPD'],datasets:[{data:[75,68,43,39,37,37,34,33,32,32],backgroundColor:'rgba(52,211,153,0.8)',borderColor:'#34D399',borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.06)'}},y:{grid:{display:false}}}}});}if(window.Chart)initDis();<\/script>`,
+  },
+  {
+    id: 'code4',
+    title: 'AE dashboard with metric cards (double-escaped quotes)',
+    html: `<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:transparent}.dashboard{padding:20px}.title{font-size:20px;font-weight:500;color:#334155;margin-bottom:4px}.subtitle{font-size:13px;color:#64748B;margin-bottom:24px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}.metric-card{background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:16px}.metric-label{font-size:12px;color:#64748B;margin-bottom:6px}.metric-value{font-size:28px;font-weight:500;color:#3730A3;margin-bottom:2px}.chart-container{background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:20px}.chart-title{font-size:14px;font-weight:500;color:#334155;margin-bottom:16px}.chart-wrapper{position:relative;width:100%;height:320px}</style><div class=\\"dashboard\\"><div class=\\"title\\">有害事象（AE）分析ダッシュボード</div><div class=\\"subtitle\\">医療記録データ 1,010件の解析結果</div><div class=\\"metrics\\"><div class=\\"metric-card\\"><div class=\\"metric-label\\">総患者数</div><div class=\\"metric-value\\">1,010</div></div><div class=\\"metric-card\\"><div class=\\"metric-label\\">AE発生件数</div><div class=\\"metric-value\\">625</div></div><div class=\\"metric-card\\"><div class=\\"metric-label\\">AE発生率</div><div class=\\"metric-value\\">61.9%</div></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">AE関連症状トップ10</div><div class=\\"chart-wrapper\\"><canvas id=\\"symptomChart\\"></canvas></div></div></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"initCharts()\\"><\/script><script>function initCharts(){new Chart(document.getElementById('symptomChart'),{type:'bar',data:{labels:['熱','倦怠感','だるい','イライラ','しんどい','不安','めまい','頭痛','下痢','吐き気'],datasets:[{data:[272,183,183,166,138,131,125,124,122,113],backgroundColor:'rgba(251,113,133,0.1)',borderColor:'#FB7185',borderWidth:2,borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.06)'}},y:{grid:{display:false}}}}});}if(window.Chart)initCharts();<\/script>`,
+  },
+  {
+    id: 'code6',
+    title: '6-chart dashboard (double-escaped quotes, complex)',
+    html: `<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--font-sans);background:transparent;padding:16px}.header{background:#F8FAFC;border:0.5px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px}.header h1{font-size:20px;font-weight:500;color:#334155;margin-bottom:8px}.header p{font-size:13px;color:#64748B}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}.metric-card{background:white;border:0.5px solid #e2e8f0;border-radius:8px;padding:16px}.metric-card .value{font-size:28px;font-weight:500;color:#3730A3;margin-bottom:4px}.metric-card .label{font-size:12px;color:#64748B}.charts{display:grid;gap:16px}.chart-container{background:white;border:0.5px solid #e2e8f0;border-radius:12px;padding:20px}.chart-title{font-size:15px;font-weight:500;color:#334155;margin-bottom:16px}.chart-wrapper{position:relative;height:280px}</style><div class=\\"header\\"><h1>医療記録データ分析ダッシュボード</h1><p>1,010件の患者記録から抽出した構造化データ</p></div><div class=\\"metrics\\"><div class=\\"metric-card\\"><div class=\\"value\\">1,010</div><div class=\\"label\\">総レコード数</div></div><div class=\\"metric-card\\"><div class=\\"value\\">625</div><div class=\\"label\\">副作用報告</div></div><div class=\\"metric-card\\"><div class=\\"value\\">54.9歳</div><div class=\\"label\\">平均年齢</div></div><div class=\\"metric-card\\"><div class=\\"value\\">660</div><div class=\\"label\\">データ欠損</div></div></div><div class=\\"charts\\"><div class=\\"chart-container\\"><div class=\\"chart-title\\">頻出症状 TOP 10</div><div class=\\"chart-wrapper\\"><canvas id=\\"c1\\"></canvas></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">疾患分布</div><div class=\\"chart-wrapper\\"><canvas id=\\"c2\\"></canvas></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">薬剤使用頻度</div><div class=\\"chart-wrapper\\"><canvas id=\\"c3\\"></canvas></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">年齢分布</div><div class=\\"chart-wrapper\\"><canvas id=\\"c4\\"></canvas></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">バイタルサイン異常値</div><div class=\\"chart-wrapper\\"><canvas id=\\"c5\\"></canvas></div></div><div class=\\"chart-container\\"><div class=\\"chart-title\\">データ品質問題</div><div class=\\"chart-wrapper\\"><canvas id=\\"c6\\"></canvas></div></div></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"init()\\"><\/script><script>function init(){new Chart(document.getElementById('c1'),{type:'bar',data:{labels:['熱','イライラ','しんどい','不安','倦怠感','だるい','お腹が痛い','めまい','頭痛','咳'],datasets:[{data:[478,256,216,191,183,183,128,125,124,123],backgroundColor:'#818CF8',borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.06)'}},y:{grid:{display:false}}}}});new Chart(document.getElementById('c2'),{type:'doughnut',data:{labels:['高血圧','糖尿病','甲状腺機能低下症','感染症','不整脈','慢性腎臓病','気管支炎','認知症','狭心症','COPD'],datasets:[{data:[97,75,43,41,39,37,37,34,33,32],backgroundColor:['#818CF8','#34D399','#FBBF24','#FB7185','#38BDF8','#C7D2FE','#A7F3D0','#FDE68A','#FECDD3','#BAE6FD'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:12,padding:8,font:{size:11}}}}}});new Chart(document.getElementById('c3'),{type:'bar',data:{labels:['グリメピリド','アムロジピン','ロキソプロフェン','レバミピド','ランソプラゾール','エナラプリル','アトルバスタチン','ビソプロロール','メトホルミン'],datasets:[{data:[51,51,47,43,42,40,38,34,33],backgroundColor:'#34D399',borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.06)'}},y:{grid:{display:false}}}}});new Chart(document.getElementById('c4'),{type:'bar',data:{labels:['20-39歳','40-59歳','60-79歳','80歳以上'],datasets:[{data:[172,133,177,86],backgroundColor:'#FBBF24',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,0.06)'},beginAtZero:true},x:{grid:{display:false}}}}});new Chart(document.getElementById('c5'),{type:'bar',data:{labels:['高血圧(>=140)','発熱(>=37.5)','HbA1c異常(>=6.5)','CRP上昇(>=1.0)'],datasets:[{data:[297,390,309,252],backgroundColor:'#FB7185',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,0.06)'},beginAtZero:true},x:{grid:{display:false}}}}});new Chart(document.getElementById('c6'),{type:'bar',data:{labels:['データ欠損','曖昧な表現','矛盾する情報'],datasets:[{data:[660,595,73],backgroundColor:'#94A3B8',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,0.06)'},beginAtZero:true},x:{grid:{display:false}}}}});}if(window.Chart)init();<\/script>`,
+  },
+  {
+    id: 'code7',
+    title: 'Multi-tab bar chart with onclick (double-escaped quotes)',
+    html: `<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:transparent}.container{padding:20px}.title{font-size:18px;font-weight:500;color:#334155;margin-bottom:20px}.tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:0.5px solid #e2e8f0;padding-bottom:0}button{background:none;border:none;padding:10px 16px;font-size:13px;color:#64748B;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s}button.active{color:#4F46E5;border-bottom-color:#4F46E5;font-weight:500}button:hover{color:#334155}.chart-wrapper{position:relative;width:100%;height:300px;background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:20px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.stat-card{background:#f8fafc;border-radius:6px;padding:12px;text-align:center}.stat-label{font-size:11px;color:#64748B;margin-bottom:4px}.stat-value{font-size:16px;font-weight:500;color:#334155}</style><div class=\\"container\\"><div class=\\"title\\">臨床指標分析</div><div class=\\"tabs\\"><button class=\\"active\\" onclick=\\"switchTab(0)\\">血圧</button><button onclick=\\"switchTab(1)\\">心拍数・体温</button><button onclick=\\"switchTab(2)\\">検査値</button></div><div class=\\"chart-wrapper\\"><canvas id=\\"metricsChart\\"></canvas></div><div class=\\"stats\\" id=\\"statsDisplay\\"></div></div><script src=\\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js\\" onload=\\"init()\\"><\/script><script>var chart;var currentTab=0;var datasets=[{title:'血圧分布',labels:['90未満','90-119','120-139','140-159','160以上'],data:[{label:'収縮期血圧',data:[12,156,245,168,74],color:'#818CF8'},{label:'拡張期血圧',data:[8,198,312,98,39],color:'#34D399'}],stats:[{label:'収縮期平均',value:'135.2 mmHg'},{label:'拡張期平均',value:'85.4 mmHg'},{label:'高血圧率',value:'37.0%'},{label:'測定数',value:'655件'}]},{title:'心拍数・体温',labels:['60未満','60-79','80-99','100-119','120以上'],data:[{label:'心拍数',data:[45,312,398,78,16],color:'#FB7185'},{label:'体温',data:[18,156,445,98,11],color:'#FBBF24'}],stats:[{label:'心拍数平均',value:'85.3 bpm'},{label:'体温平均',value:'37.5℃'},{label:'頻脈率',value:'11.1%'},{label:'発熱率',value:'15.0%'}]},{title:'検査値',labels:['正常下限未満','正常範囲','軽度上昇','中等度上昇','高度上昇'],data:[{label:'HbA1c',data:[8,168,156,78,26],color:'#818CF8'},{label:'CRP',data:[12,98,87,56,29],color:'#FB7185'},{label:'WBC',data:[23,198,87,34,11],color:'#34D399'}],stats:[{label:'HbA1c平均',value:'7.4%'},{label:'CRP平均',value:'4.1 mg/dL'},{label:'WBC平均',value:'8,814 /μL'},{label:'異常値率',value:'42.3%'}]}];function init(){renderChart();}function switchTab(idx){currentTab=idx;var btns=document.querySelectorAll('button');btns.forEach(function(b,i){b.className=i===idx?'active':''});renderChart();}function renderChart(){var ds=datasets[currentTab];var statsHtml=ds.stats.map(function(s){return '<div class="stat-card"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+s.value+'</div></div>'}).join('');document.getElementById('statsDisplay').innerHTML=statsHtml;if(chart)chart.destroy();chart=new Chart(document.getElementById('metricsChart'),{type:'bar',data:{labels:ds.labels,datasets:ds.data.map(function(d){return{label:d.label,data:d.data,backgroundColor:d.color+'33',borderColor:d.color,borderWidth:2,borderRadius:6}})},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{y:{grid:{color:'rgba(0,0,0,0.06)'}},x:{grid:{display:false}}}}});}if(window.Chart)init();<\/script>`,
+  },
+];
+
+// ── Test runner ───────────────────────────────────────────────────────────────────────────────
+const SRCDOC = buildSrcdoc();
+const testsEl = document.getElementById('tests');
+const summaryEl = document.getElementById('summary');
+let passed = 0, timedOut = 0;
+const total = CASES.length;
+
+function updateSummary() {
+  const done = passed + timedOut;
+  if (done < total) {
+    summaryEl.textContent = 'Running... (' + done + '/' + total + ')';
+    summaryEl.className = '';
+  } else if (timedOut === 0) {
+    summaryEl.textContent = passed + ' / ' + total + ' PASS — all charts rendered';
+    summaryEl.className = 'all-pass';
+  } else {
+    summaryEl.textContent = passed + ' / ' + total + ' PASS, ' + timedOut + ' failed';
+    summaryEl.className = 'has-fail';
+  }
+}
+
+CASES.forEach(function(tc) {
+  // Build DOM
+  const wrapper = document.createElement('div');
+  wrapper.className = 'test-case';
+
+  const header = document.createElement('div');
+  header.className = 'test-header';
+  header.innerHTML =
+    '<span class="test-title">' + tc.id + '</span>' +
+    '<span class="test-title" style="font-family:system-ui;font-weight:400;color:#64748b;">' + tc.title + '</span>' +
+    '<span class="status pending" id="status-' + tc.id + '">Pending</span>';
+  wrapper.appendChild(header);
+
+  const iframeWrap = document.createElement('div');
+  iframeWrap.className = 'iframe-wrap';
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('sandbox', 'allow-scripts');
+  iframe.style.cssText = 'width:100%;height:20px;border:none;display:block;';
+  iframe.srcdoc = SRCDOC;
+  iframeWrap.appendChild(iframe);
+  wrapper.appendChild(iframeWrap);
+  testsEl.appendChild(wrapper);
+
+  let ready = false;
+  let resolved = false;
+
+  function resolve(ok, msg) {
+    if (resolved) return;
+    resolved = true;
+    const statusEl = document.getElementById('status-' + tc.id);
+    if (ok) {
+      statusEl.textContent = 'PASS — ' + msg;
+      statusEl.className = 'status pass';
+      passed++;
+    } else {
+      statusEl.textContent = 'FAIL — ' + msg;
+      statusEl.className = 'status timeout';
+      timedOut++;
+    }
+    updateSummary();
+  }
+
+  window.addEventListener('message', function(e) {
+    if (e.source !== iframe.contentWindow) return;
+    const type = e.data && e.data.type;
+
+    if (type === 'widget:ready' && !ready) {
+      ready = true;
+      iframe.contentWindow.postMessage({ type: 'widget:finalize', html: tc.html }, '*');
+    }
+
+    if (type === 'widget:resize') {
+      const h = e.data.height || 0;
+      if (h > 50) {
+        iframe.style.height = Math.min(h + 4, 2400) + 'px';
+        resolve(true, 'height ' + h + 'px');
+      }
+    }
+  });
+
+  // Timeout after 15s (CDN load + render time)
+  setTimeout(function() {
+    resolve(false, 'chart not rendered within 15s — CDN timeout or script error');
+  }, 15000);
+});
+
+updateSummary();
+</script>
+</body>
+</html>

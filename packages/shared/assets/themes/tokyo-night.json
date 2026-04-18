@@ -1,0 +1,26 @@
+{
+  "name": "Tokyo Night",
+  "description": "Neon-lit cityscape with deep blue undertones",
+  "shikiTheme": {
+    "light": "github-light",
+    "dark": "tokyo-night"
+  },
+  "background": "oklch(0.929 0.008 278.6)",
+  "foreground": "oklch(0.360 0.053 273.4)",
+  "accent": "oklch(0.476 0.140 260.2)",
+  "destructive": "oklch(0.480 0.100 9.5)",
+  "paper": "oklch(0.895 0.010 273.3)",
+  "navigator": "oklch(0.883 0.010 273.3)",
+  "popover": "oklch(0.895 0.010 273.3)",
+  "popoverSolid": "oklch(0.895 0.010 273.3)",
+  "dark": {
+    "background": "oklch(0.226 0.021 280.5)",
+    "foreground": "oklch(0.767 0.054 275.5)",
+    "accent": "oklch(0.719 0.132 264.2)",
+    "destructive": "oklch(0.723 0.159 10.3)",
+    "paper": "oklch(0.261 0.034 274.2)",
+    "navigator": "oklch(0.204 0.016 284.9)",
+    "popover": "oklch(0.261 0.034 274.2)",
+    "popoverSolid": "oklch(0.261 0.034 274.2)"
+  }
+}

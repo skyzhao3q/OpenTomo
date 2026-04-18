@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "description": "Default configuration values for OpenTomo",
+  "defaults": {
+    "provider": "anthropic",
+    "authType": "api_key",
+    "notificationsEnabled": true,
+    "colorTheme": "default",
+    "autoCapitalisation": true,
+    "sendMessageKey": "enter",
+    "spellCheck": false
+  },
+  "workspaceDefaults": {
+    "thinkingLevel": "think",
+    "permissionMode": "safe",
+    "cyclablePermissionModes": ["safe", "ask", "allow-all"],
+    "localMcpServers": {
+      "enabled": true
+    }
+  }
+}

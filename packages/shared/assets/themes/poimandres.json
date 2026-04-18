@@ -1,0 +1,26 @@
+{
+  "name": "Poimandres",
+  "description": "Muted dark palette with soft teal and lavender accents",
+  "shikiTheme": {
+    "light": "min-light",
+    "dark": "poimandres"
+  },
+  "background": "oklch(0.980 0.005 286.3)",
+  "foreground": "oklch(0.324 0.023 274.8)",
+  "accent": "oklch(0.528 0.096 248.8)",
+  "destructive": "oklch(0.562 0.136 354.3)",
+  "paper": "oklch(0.950 0.005 286.3)",
+  "navigator": "oklch(0.950 0.005 286.3)",
+  "popover": "oklch(0.950 0.005 286.3)",
+  "popoverSolid": "oklch(0.950 0.005 286.3)",
+  "dark": {
+    "background": "oklch(0.237 0.020 271.8)",
+    "foreground": "oklch(0.751 0.048 277.1)",
+    "accent": "oklch(0.863 0.071 247.4)",
+    "destructive": "oklch(0.654 0.146 349.8)",
+    "paper": "oklch(0.289 0.024 264.1)",
+    "navigator": "oklch(0.216 0.018 275.0)",
+    "popover": "oklch(0.289 0.024 264.1)",
+    "popoverSolid": "oklch(0.289 0.024 264.1)"
+  }
+}

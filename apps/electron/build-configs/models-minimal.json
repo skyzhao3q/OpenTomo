@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "description": "Minimal model configuration (Sonnet + Haiku)",
+  "defaults": {
+    "authType": "api_key",
+    "notificationsEnabled": true,
+    "colorTheme": "default",
+    "autoCapitalisation": true,
+    "sendMessageKey": "enter",
+    "spellCheck": false,
+    "availableModels": [
+      {
+        "id": "claude-sonnet-4-5-20250929",
+        "name": "Sonnet 4.5",
+        "shortName": "Sonnet",
+        "description": "Balanced",
+        "contextWindow": 200000
+      },
+      {
+        "id": "claude-haiku-4-5-20251001",
+        "name": "Haiku 4.5",
+        "shortName": "Haiku",
+        "description": "Fast & efficient",
+        "contextWindow": 200000
+      }
+    ]
+  },
+  "workspaceDefaults": {
+    "thinkingLevel": "think",
+    "permissionMode": "safe",
+    "cyclablePermissionModes": ["safe", "ask", "allow-all"],
+    "localMcpServers": {
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "description": "Premium configuration (Opus models only)",
+  "defaults": {
+    "authType": "api_key",
+    "notificationsEnabled": true,
+    "colorTheme": "default",
+    "autoCapitalisation": true,
+    "sendMessageKey": "enter",
+    "spellCheck": false,
+    "availableModels": [
+      {
+        "id": "claude-opus-4-6",
+        "name": "Opus 4.6",
+        "shortName": "Opus",
+        "description": "Most capable",
+        "contextWindow": 200000
+      },
+      {
+        "id": "claude-opus-4-5-20251101",
+        "name": "Opus 4.5",
+        "shortName": "Opus 4.5",
+        "description": "Previous generation",
+        "contextWindow": 200000
+      }
+    ]
+  },
+  "workspaceDefaults": {
+    "thinkingLevel": "think",
+    "permissionMode": "safe",
+    "cyclablePermissionModes": ["safe", "ask", "allow-all"],
+    "localMcpServers": {
+      "enabled": true
+    }
+  }
+}

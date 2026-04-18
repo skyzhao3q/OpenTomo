@@ -1,0 +1,25 @@
+{
+  "name": "Legacy (Original Default)",
+  "description": "OpenTomoのオリジナルデフォルトテーマ (ゴールデンイエロー)",
+  "author": "OpenTomo",
+  "license": "MIT",
+  "supportedModes": ["light", "dark"],
+  "shikiTheme": {
+    "light": "github-light",
+    "dark": "github-dark"
+  },
+  "background": "#F6F7FB",
+  "foreground": "#1F2937",
+  "accent": "#F5D547",
+  "info": "#F39A4A",
+  "success": "oklch(0.55 0.17 145)",
+  "destructive": "#EF4444",
+  "dark": {
+    "background": "#0E1220",
+    "foreground": "#E5E7EB",
+    "accent": "#F5D547",
+    "info": "#F39A4A",
+    "success": "oklch(0.60 0.17 145)",
+    "destructive": "#EF4444"
+  }
+}

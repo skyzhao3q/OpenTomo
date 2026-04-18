@@ -101,7 +101,7 @@ describe('getSetupNeeds', () => {
       expect(needs.isFullyConfigured).toBe(false);
     });
 
-    it('should not need credentials when hasCredentials is true', () => {
+    it('should not need credentials when hasCredentials is true, but still need a workspace', () => {
       const state: AuthState = {
         billing: {
           type: 'oauth_token',
@@ -115,7 +115,8 @@ describe('getSetupNeeds', () => {
       const needs = getSetupNeeds(state);
 
       expect(needs.needsCredentials).toBe(false);
-      expect(needs.isFullyConfigured).toBe(true);
+      expect(needs.needsWorkspace).toBe(true);
+      expect(needs.isFullyConfigured).toBe(false);
     });
   });
 
